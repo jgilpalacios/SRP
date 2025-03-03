@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Particiones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px;
+            cursor: pointer;
+            border: 1px solid black;
+        }
+
+        .active {
+            background-color: lightgray;
+            border-width: 3px;
+        }
+
+        .menu {
+            display: none;
+            border: 1px solid black;
+            padding: 10px;
+        }
+
+        .visible {
+            display: block;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="./autorun.js"></script>
+    <script src="./srp.js"></script>
+</head>
+
+<body>
+    <h1>Gestor de Particiones</h1>
+    <p><label for="numDiscos">Número de discos:</label>
+    <select id="numDiscos" onchange="actualizarDiscos()">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+    </select></p>
+
+    <div class="tabs" id="tabs"></div>
+    <div id="menu" class="menu"></div>
+    <button onclick="comprobarErrores()">Comprobación</button><button onclick="generarZip()">Descargar SRP.ZIP</button>
+    <p id="error"></p>
+    <!--Parseador-->
+    
+
+    <script>
+        let configuracion = {
+            users: [{ nombre: 'madrid', pass: 'cmadrid', enc: false }, { nombre: 'consejeria', pass: 'cconsejeria', enc: true }],
+            nDiscos: 1,
+            particiones: [
+                { nombre: 'EFI', particionEFI: { disco: 'a', particion: 1, activa: true } },
+                { nombre: 'SRP', particionSRP: { disco: 'a', particion: 7, activa: true }, particionSRPBACKUP: { disco: 'a', particion: 8, activa: true } },
+                { nombre: 'WINDOWS', particionWIN: { disco: 'a', particion: 3, activa: true }, particionRES: { disco: 'a', particion: 4, activa: true }, particionRES2: { disco: 'a', particion: 4, activa: false } },
+                { nombre: 'MAX', particionMAX: { disco: 'a', particion: 5, activa: true }, particionSWAP: { disco: 'a', particion: 6, activa: true } }
+            ]
+        };
+
+        function actualizarDiscos() {
+            let numDiscos = document.getElementById("numDiscos").value;
+            configuracion.nDiscos = numDiscos;
+            cargarTabs();
+        }
+        //para gestionar las contraseñas en srp
+        let srp_tab;
+        function cargarTabs() {
+            const tabs = document.getElementById("tabs");
+            tabs.innerHTML = "";
+            let srp_index = 1;
+
+            configuracion.particiones.forEach((particion, index) => {
+                let tab = document.createElement("div");
+                tab.className = "tab";
+                tab.innerText = particion.nombre;
+                tab.style.backgroundColor = `hsl(${index * 60}, 70%, 80%)`;
+                tab.onclick = () => mostrarMenu(index, tab);
+                tabs.appendChild(tab);
+                if (index === srp_index) srp_tab = tab;
+                const menu = document.getElementById("menu");
+                menu.innerHTML = "";
+                document.getElementById("error").innerText = '';
+            });
+            //se pone para activar srp y inicializar todo
+            mostrarMenu(srp_index, srp_tab)
+        }
+        //para gestionar las contraseñas en srp se crean como variables globales
+        let contrasenna = document.createElement("input");
+        contrasenna.type = 'password';
+        contrasenna.value = configuracion.users[0].pass;
+        contrasenna.title = 'Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.';
+        contrasenna.onmouseover = () => { contrasenna.type = 'text' }
+        contrasenna.onmouseout = () => { contrasenna.type = 'password' }
+        contrasenna.onchange = () => {
+          if(validarTexto(contrasenna.value)) configuracion.users[0].pass = contrasenna.value;
+          else {
+            alert('Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.');
+            contrasenna.value=configuracion.users[0].pass;
+          }
+        }
+
+        let ccontrasenna = document.createElement("input");
+        ccontrasenna.id = 'password';
+        ccontrasenna.type = 'password';
+        ccontrasenna.value = configuracion.users[1].pass;
+        setTimeout(generatePBKDF2, 1);//lanzamos en paralelo la encriptacion
+        ccontrasenna.title = 'Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.';
+        ccontrasenna.onmouseover = () => { ccontrasenna.type = 'text' }
+        ccontrasenna.onmouseout = () => { ccontrasenna.type = 'password' }
+        ccontrasenna.onchange = () => {
+          estaEncriptada=false;
+          document.getElementById('hashedPassword').style.visibility = 'hidden';
+          if(validarTexto(ccontrasenna.value)){
+            configuracion.users[1].pass = ccontrasenna.value;
+            setTimeout(generatePBKDF2, 1);//lanzamos en paralelo la encriptacion
+          }else {
+            alert('Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.');
+            ccontrasenna.value=configuracion.users[1].pass;
+          }
+        }
+
+        let hashedPassword = document.createElement("input");
+        hashedPassword.type = 'text';
+        hashedPassword.id = 'hashedPassword';
+        hashedPassword.title = 'Haz doble click para copiar en el portapapeles la contraseña encriptada';
+        hashedPassword.ondblclick = () => {
+            hashedPassword.select(); // Selecciona el texto
+            document.execCommand("copy"); // Copia el texto al portapapeles
+        }
+        hashedPassword.style.visibility = 'hidden';
+
+        function mostrarMenu(index, tab) {
+            const menu = document.getElementById("menu");
+            menu.innerHTML = "";
+            menu.style.backgroundColor = tab.style.backgroundColor;
+            let particion = configuracion.particiones[index];
+
+            document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            //if(contenidoTab[index]===undefined){
+            Object.keys(particion).forEach(clave => {
+                if (clave !== "nombre") {
+                    let div = document.createElement("div");
+                    let label = document.createElement("label");
+                    label.innerText = clave + ": ";
+                    let select = document.createElement("select");
+
+                    for (let i = 1; i <= 9; i++) {
+                        let option = document.createElement("option");
+                        option.value = i;
+                        option.innerText = i;
+                        if (particion[clave].particion == i) option.selected = true;
+                        select.appendChild(option);
+                    }
+
+                    let discoSelect = document.createElement("select");
+                    let discos = ['a', 'b', 'c', 'd'].slice(0, configuracion.nDiscos);
+                    discos.forEach(disco => {
+                        let option = document.createElement("option");
+                        option.value = disco;
+                        option.innerText = "sd" + disco;
+                        if (particion.nombre === "EFI" && disco !== "a") return;
+                        if (particion[clave].disco === disco) option.selected = true;
+                        discoSelect.appendChild(option);
+                    });
+
+                    discoSelect.onchange = () => {
+                        particion[clave].disco = discoSelect.value;
+                        document.getElementById("error").innerText = '';
+                        //actualizarDiscos();
+                    };
+
+                    let checkbox = document.createElement("input");
+                    checkbox.type = "checkbox";
+                    checkbox.checked = particion[clave].activa;
+
+                    select.onchange = () => {
+                        particion[clave].particion = parseInt(select.value);
+                        document.getElementById("error").innerText = '';
+                    }
+                    checkbox.onchange = () => {
+                        particion[clave].activa = checkbox.checked;
+                        document.getElementById("error").innerText = '';
+                    }
+
+                    div.appendChild(label);
+                    div.appendChild(discoSelect);
+                    div.appendChild(select);
+                    if (clave !== 'particionEFI' && clave !== 'particionSRPBACKUP' && clave !== 'particionSRP') div.appendChild(checkbox);
+                    if (clave === 'particionSRPBACKUP') {
+                        let label = document.createElement("label");
+                        label.innerText = 'user: madrid => clave: ';
+                        let parrafo = document.createElement("p");
+
+                        parrafo.appendChild(label);
+                        parrafo.appendChild(contrasenna);
+                        div.appendChild(parrafo);
+                        label = document.createElement("label");
+                        label.innerText = 'superuser: consejeria => clave: ';
+                        parrafo = document.createElement("p");
+
+                        parrafo.appendChild(label);
+                        parrafo.appendChild(ccontrasenna);
+                        label = document.createElement("label");
+                        label.innerText = ' Encriptado grub.pbkdf2: ';
+
+                        parrafo.appendChild(label);
+                        parrafo.appendChild(hashedPassword);
+                        div.appendChild(parrafo);
+                    }
+                    menu.appendChild(div);
+                }
+                //contenidoTab[index]=menu;
+            });
+            //}else{menu=contenidoTab[index]}
+            menu.classList.add("visible");
+        }
+
+        function comprobarErrores() {
+            //se pone activa srp para tener en document las partes de las contraseña
+            mostrarMenu(1, srp_tab)
+            let errorMsg = "";
+            let activas = new Set();
+            configuracion.particiones.forEach(particion => {
+                Object.keys(particion).forEach(clave => {
+                    if (clave !== "nombre") {
+                        let id = particion[clave].disco + particion[clave].particion;
+                        if (particion[clave].activa) {
+                            if (activas.has(id)) {
+                                errorMsg += `Conflicto: La partición sd${id} está duplicada.\n`;
+                            }
+                            activas.add(id);
+                        }
+                    }
+                });
+            });
+
+            let efi = configuracion.particiones.find(p => p.nombre === "EFI");
+            if (efi && efi.particionEFI.disco !== 'a') {
+                errorMsg += "Error: La partición EFI debe estar en el disco 'a'.\n";
+            }
+            if(!estaEncriptada)generatePBKDF2();//solo si no se ha encriptado previamente se lanza
+            document.getElementById("error").innerText = errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion);
+            //alert('errorMsg: '+errorMsg+'; '+(errorMsg===''));
+            return errorMsg==='';
+        }
+
+        cargarTabs();
+
+        function cargarImagenes(zip) {
+            return new Promise((resolve, reject) => {
+                const folder = zip.folder("srp/fondos");
+                const imageFiles = ["fondo.png", "fondo2.png", "fondo2.png", "fondo3.png", "fondogene.png", "fondorest.png"]; // Nombres de imágenes esperados
+                let loadedImages = 0;
+
+                imageFiles.forEach(imgName => {
+                    fetch(`fondos/${imgName}`)
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const reader = new FileReader();
+                            reader.onload = function () {
+                                folder.file(imgName, reader.result.split(",")[1], { base64: true });
+                                loadedImages++;
+                                if (loadedImages === imageFiles.length) resolve();
+                            };
+                            reader.readAsDataURL(blob);
+                        })
+                        .catch(() => {
+                            loadedImages++;
+                            if (loadedImages === imageFiles.length) resolve();
+                        });
+                });
+            });
+        }
+
+        function generarZip() {
+            if (!comprobarErrores()){//si hay errores se avisa y no generamos srp.zip
+              alert('Revisa los errores encontrados en la configuración');
+              return;              
+            }
+            let zip = new JSZip();
+            // en folder incluiremos los scripts de autorun que la base está en la variable autorun que se carga de autorun.js
+            let folder = zip.folder("autorun");
+            let ddiscos = ['a', 'b', 'c', 'd'];
+            let pWin = configuracion.particiones[2].particionWIN;
+            let pResW = configuracion.particiones[2].particionRES;
+            let pResW2 = configuracion.particiones[2].particionRES2;
+            let pMAX = configuracion.particiones[3].particionMAX;
+            let pSWAP = configuracion.particiones[3].particionSWAP;
+            let pEFI = configuracion.particiones[0].particionEFI;
+            let textoSWAP = 'no_hay_swap';
+            if (pSWAP.activa) textoSWAP = '/dev/sd' + pSWAP.disco + pSWAP.particion;
+            let pSRP = configuracion.particiones[1].particionSRP;
+            let pSRPBACKUP = configuracion.particiones[1].particionSRPBACKUP;
+            let ngrupos=0;
+            [pWin,pMAX,pSWAP].forEach(grupo=>{
+                if(grupo.activa)ngrupos++;
+            });
+            ngWin=1;//al menos estaría la de windows si se llega a crear
+            if(pResW.activa)ngWin++;
+            if(pResW2.activa)ngWin++;
+            //para máx se deja fijo 2 ya que aunque no haya swap se gestiona con no_hay_swap en el device
+            //para efi dejamos fijo 1
+            autorun.forEach(archivo => {
+                if (archivo.nombre === 'autorun0') {
+                //El archivo autorun0 se hace todo desde aquí no se usa la plantilla de autorun.js     
+                    let aux = `# version: SRP v2.0 #\n\n# Nombre de la particion que contiene los backups y los menus de GRUB;
+BACKUP_DEV="/dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion}"
+# SRP_DEV Particion que contiene el sofware de Sytem Rescue CD, que ejercuta los procesos
+SRP_DEV="/dev/sd${pSRP.disco + pSRP.particion}"
+# Punto de montaje de la partición que contendrá los backups
+BACKUP_MNT="/mnt/SRPBACKUP"
+# Verificar si el directorio /mnt/backup existe
+if [ -d "$BACKUP_MNT" ]; then
+    echo "El directorio '$BACKUP_MNT' ya existe."
+else
+    echo "El directorio '$BACKUP_MNT' no existe. Creándolo ahora..."
+    mkdir -p "$BACKUP_MNT" # Crea el directorio (incluyendo directorios padres si no existen)
+    if [ $? -eq 0 ]; then
+        echo "Directorio creado exitosamente."
+    else
+        echo "Hubo un error al crear el directorio."
+    fi
+fi
+# Número de grupos de particiones
+NG=${ngrupos}
+###############################################################################
+# Número de particiones que tiene el grupo x
+#Gx_NP=n
+# Etiqueta del grupo. Esta etiqueta se mostrará en los menus, en mensajes tipo:
+# Restaurar <ETIQUETA>...
+# Generar backup de <ETIQUETA>...
+#Gx_MENU="Linux"
+#------------------------------------------------------------------------------
+# Nombre dispositivo
+#GxPn_DEV="/dev/sda1"
+# Etiqueta que se muestra en los menus
+#GxPn_MENU="MAX"
+# Etiqueta del sistema de ficheros
+#GxPn_LABEL="MAX65"
+# Sistema de ficheros
+#GxPn_FS="ntfs"
+###############################################################################\n`;
+
+                    if (pWin.activa) {
+                        aux += `G1_NP=${ngWin}
+G1_MENU="Windows"\n`;
+                        if (pResW.activa) {   
+                            aux+=`#------------------------------------------------------------------------------
+G1P1_DEV="/dev/sd${pResW.disco + pResW.particion}"
+G1P1_LABEL_MENU=""
+G1P1_LABEL="Reservado para el sistema"
+G1P1_FS="ntfs"\n`;
+                        }
+                        aux+=`#------------------------------------------------------------------------------
+G1P2_DEV="/dev/sd${pWin.disco + pWin.particion}"
+G1P2_LABEL_MENU="Windows"
+G1P2_LABEL="Windows"
+G1P2_FS="ntfs"\n`;
+                        if (pResW2.activa) {
+                            aux += `#------------------------------------------------------------------------------
+G1P3_DEV="/dev/sd${pResW2.disco + pResW2.particion}"
+G1P3_MENU=""
+G1P3_LABEL="Reservado para el sistema 2"
+G1P3_FS="ntfs"\n`;
+                        }
+                        aux += `###############################################################################\n`;
+                    }
+                    if (pMAX.activa) {
+                        aux += `G2_NP=2
+G2_MENU="MAX"
+#------------------------------------------------------------------------------
+G2P1_DEV="/dev/sd${pMAX.disco + pMAX.particion}"
+G2P1_LABEL_MENU="MAX"
+G2P1_LABEL="MAX12"
+G2P1_FS="ext4"
+#------------------------------------------------------------------------------
+# Asignar a G2P2_DEV la etiqueta "no_hay_swap" para indicar que no existe swap.
+G2P2_DEV="${textoSWAP}"
+G2P2_LABEL_MENU=""
+G2P2_LABEL="swap"
+G2P2_FS="swap"
+###############################################################################\n`;
+                    }
+                    aux += `#--No usamos la particion datos.
+#G3_NP=1
+#G3_MENU="Datos"
+#------------------------------------------------------------------------------
+#G3P1_DEV="/dev/sda5"
+#G3P1_LABEL_MENU="Datos"
+#G3P1_LABEL="Datos"
+#G3P1_FS="ntfs"
+###############################################################################
+G4_NP=1
+G4_MENU="EFI"
+#------------------------------------------------------------------------------
+G4P1_DEV="/dev/sd${pEFI.disco + pEFI.particion}"
+G4P1_LABEL_MENU="EFI"
+G4P1_LABEL="EFI"
+G4P1_FS="fat32"
+###############################################################################              
+`;
+                    folder.file(archivo.nombre, aux);
+                } else {
+                    if(['autorun1','autorun2','autorun3','autorun8','autorun9','autorunA','funciones.sh'].includes(archivo.nombre)){
+                        folder.file(archivo.nombre, archivo.contenido);
+                    }else{
+                        if(['autorun4','autorun6'].includes(archivo.nombre)&&pWin.activa){
+                            texto=archivo.contenido;
+                            if (!pResW.activa){ 
+                                texto = reemplazarTexto(texto, 'particion recuperacion windows', '');
+                            }
+                            if (!pResW2.activa){
+                                texto = reemplazarTexto(texto, 'segunda particion recuperacion windows', '');
+                            }
+                        
+                            folder.file(archivo.nombre, texto);    
+                        }
+                        if(['autorun5','autorun7'].includes(archivo.nombre)&&pMAX.activa){
+                            folder.file(archivo.nombre, archivo.contenido);    
+                        }
+                        if(['autorunB'].includes(archivo.nombre)){
+                            texto=archivo.contenido;
+                            if(!pWin.activa){
+                                texto = reemplazarTexto(texto, 'entrada windows', '');
+                            }
+                            if(!pMAX.activa){
+                                texto = reemplazarTexto(texto, 'entrada MAX', '');
+                            }
+                            folder.file(archivo.nombre, texto);
+                        }
+                    }
+                }
+            });
+            ///creamos el configurador de grub en su sitio que enlaza con el menuprincipal de SRP
+            let folderboot = zip.folder("boot/grub");
+            folderboot.file('grub.cfg', 'configfile /srp/menus/menuprincipal.cfg');
+
+            //creamos los menúns de SRP en el arranque con grub EFI la base esta en los variable menus que proviene de srp.js
+            let folder2 = zip.folder("srp/menus");
+            
+            menus.forEach(archivo => {
+                let texto=archivo.contenido;
+                if (archivo.nombre === 'menuprincipal.cfg') { //alert('siii'
+                    
+                    let aux = `set pSRP=(hd${numDisco(pSRP.disco)},${pSRP.particion})  # Definir la variable
+export pSRP       # Hacerla global
+set pEFI=(hd${numDisco(pEFI.disco)},${pEFI.particion})  
+export pEFI   
+#set pWIN=(hd0,3)  
+#export pWIN
+set pMAX=(hd${numDisco(pMAX.disco)},${pMAX.particion})  
+export pMAX
+
+set superusers="consejeria"
+export superusers
+password_pbkdf2 consejeria ${document.getElementById('hashedPassword').value}
+password madrid ${configuracion.users[0].pass}
+`;
+
+                    texto = reemplazarTexto(texto, 'variables globales grub', aux)
+                    if (!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows', '')
+                    if (!pMAX.activa) texto = reemplazarTexto(texto, 'entrada MAX', '')
+                }
+                if (archivo.nombre === 'menucopia1.cfg') {
+                    if (!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows', '')
+                    if (!pMAX.activa) texto = reemplazarTexto(texto, 'entrada MAX', '')
+                    if (!pMAX.activa||!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows y MAX', '')
+                }
+                if (archivo.nombre === 'menucopia2.cfg') {
+                    if (!pWin.activa){ 
+                        texto = reemplazarTexto(texto, 'entrada windows', '');
+                        texto = reemplazarTexto(texto, 'entrada windows2', '');
+                        //alert(texto+'\n'+archivo.nombre+'\n'+archivo.contenido)
+                    }
+                    if (!pMAX.activa) {
+                        texto = reemplazarTexto(texto, 'entrada MAX', '');
+                        texto = reemplazarTexto(texto, 'entrada MAX2', '');
+                    }
+                    if (!pMAX.activa||!pWin.activa) {
+                        texto = reemplazarTexto(texto, 'entrada windows y MAX', '');
+                        texto = reemplazarTexto(texto, 'entrada windows y MAX2', '');
+                    }
+                }
+                if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menugeneEFI2.cfg', 'menuprincipal.cfg',
+                'menurestEFI1.cfg', 'menurestEFI2.cfg'].includes(archivo.nombre)) {
+                    folder2.file(archivo.nombre, texto);
+                }else{
+                    if(pWin.activa&&['menugenewin2.cfg','menurestwin1.cfg', 'menurestwin2.cfg'].includes(archivo.nombre)){
+                        folder2.file(archivo.nombre, texto);
+                    }
+                    if(pMAX.activa&&['menugenemax2.cfg','menurestmax1.cfg', 'menurestmax2.cfg'].includes(archivo.nombre)){
+                        folder2.file(archivo.nombre, texto);
+                    }
+                    if(pWin.activa&&pMAX.activa&&['menugenewinmax2.cfg','menurestwinmax1.cfg', 'menurestwinmax2.cfg'].includes(archivo.nombre)){
+                        folder2.file(archivo.nombre, texto);
+                    }
+                }               
+            });
+    /**
+     * Aqui añadimos los elementos de la carpeta herramientas, no se ha usado plantilla a diferencia de autorun.js y srp.js
+     */
+            let folder3 = zip.folder("herramientas");
+
+            //primero añadimos a dicha carpeta la configuración con que hemos generado menus de srp, scripts de autorun
+            //y las contraseñas de madrid y consejería para uso en el futuro.
+            folder3.file('configuración.txt', JSON.stringify(configuracion));
+
+
+            let herramienta=`#!/bin/bash
+
+## Crea las carpetas necesarias y monta en ella las particiones que contienen EFI, SRPBACUP y SRP.
+
+#creamos la carpeta EFI para contener la particion EFI
+mkdir /mnt/EFI
+#montamos la particion EFI en esa carpeta
+mount /dev/sd${pEFI.disco + pEFI.particion} /mnt/EFI
+
+#creamos la carpeta SRPBACKUP para contener la particion SRPBACKUP
+mkdir /mnt/SRPBACKUP
+#montamos la particion SRPBACKUP en esa carpeta
+mount /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion} /mnt/SRPBACKUP
+
+#creamos la carpeta SRP para contener la particion SRP
+mkdir /mnt/SRP
+#montamos la particion SRP en esa carpeta
+mount /dev/sd${pSRP.disco + pSRP.particion} /mnt/SRP`;
+            folder3.file('MontaEFI_SRPBACUP_SRP.sh', herramienta);
+            herramienta=`#!/bin/bash
+
+# Creamos la entrada en arranque EFI para arrancar con grub desde la partición SRPBACKUP:
+#    -Esa entrada aparecera con etiqueta SRP en la lista de entradas del firmware;
+#    -Se crea dentro de la carpeta EFI de la particion EFI, la carpeta SRP para esta entrada.
+
+grub-install --target=x86_64-efi --recheck --efi-directory=/mnt/EFI/ --boot-directory=/mnt/SRPBACKUP/boot/ --bootloader-id=SRP
+`;
+            folder3.file('CrearEntradaGrubEFI.sh', herramienta);
+            
+            herramienta=`#!/bin/bash
+
+## Ponemos en primer lugar del orden de arranque con el comando efibootmgr el arranque con SRP. 
+
+# Obtener el número de la nueva entrada SRP creada, eliminando el asterisco
+NEW_ENTRY=$(efibootmgr | grep "SRP" | awk '{print $1}' | sed -E 's/Boot([0-9]+)\\*/\\1/')
+
+# Obtener las entradas actuales de arranque, eliminando posibles asteriscos
+EXISTING_ENTRIES=$(efibootmgr | grep -E "Boot[0-9]+" | awk '{print $1}' | sed -E 's/Boot([0-9]+)\\*/\\1/')
+
+# Crear una nueva lista de orden de arranque, eliminando duplicados
+ORDER="$NEW_ENTRY,$(echo "$EXISTING_ENTRIES" | tr ' ' '\\n' | grep -v "^$NEW_ENTRY$" | tr '\\n' ',' | sed 's/,$//')"
+
+# Cambiar el orden de arranque
+echo "Estableciendo nuevo orden de arranque: $ORDER"
+sudo efibootmgr -o $ORDER
+
+# Ver el nuevo orden de arranque
+echo "Nuevo orden de arranque:"
+efibootmgr
+`;
+
+            folder3.file('PonerPrimeraLaEntradaSRPenEFI.sh', herramienta);
+            let folder4 = zip.folder("herramientas/MAX");
+            herramienta=`#!/bin/bash
+
+## Si hemos clonado MAX desde otro equipo, habrá que cambiar el nombre de equipo en MAX
+## ya que al ser un clon mantendrá el del equipo de que procede.
+
+# Comprobar si el script se ejecuta como superusuario
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Este script debe ejecutarse como superusuario. Usa sudo."
+  exit 1
+fi
+
+# Solicitar el nuevo nombre del equipo
+read -p "Introduce el nuevo nombre para el equipo: " nuevo_nombre
+
+# Cambiar el nombre del host en /etc/hostname
+echo "$nuevo_nombre" > /etc/hostname
+
+# Cambiar el nombre del host en /etc/hosts (asegurarse de que la dirección 127.0.0.1 coincida con el nombre del host)
+sed -i "s/127.0.0.1.*/127.0.0.1   $nuevo_nombre/" /etc/hosts
+
+# Aplicar el cambio de nombre del host
+hostname "$nuevo_nombre"
+
+# Confirmar que el cambio fue exitoso
+echo "El nombre del equipo ha sido cambiado a '$nuevo_nombre'."`;
+
+            folder4.file('cambiarNombreEquipo.sh', herramienta);
+            herramienta=`#!/bin/bash
+
+## Normalmente en un aula de informatica los equipos de windows estan en una red
+## dentro de un grupo de trabajo, con este escript se pretende facilitar que tras
+## la instalacion de MAX los equipos configuren la red y el grupo de trabajo.
+
+# Comprobar si el script se ejecuta como superusuario
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Este script debe ejecutarse como superusuario. Usa sudo."
+  exit 1
+fi
+
+# Solicitar el nombre del grupo de trabajo
+read -p "Introduce el nuevo nombre del grupo de trabajo: " nuevo_grupo_trabajo
+
+# Comprobar si Samba está instalado
+if ! dpkg -l | grep -q samba; then
+  echo "Samba no está instalado. Instalando Samba..."
+  apt update && apt install -y samba
+fi
+
+# Modificar el archivo de configuración de Samba (/etc/samba/smb.conf)
+sed -i "s/^workgroup = .*/workgroup = $nuevo_grupo_trabajo/" /etc/samba/smb.conf
+
+# Reiniciar el servicio de Samba para aplicar los cambios
+systemctl restart smbd
+
+# Confirmar que el cambio fue exitoso
+echo "El grupo de trabajo ha sido cambiado a '$nuevo_grupo_trabajo'."`;
+            folder4.file('cambiar_grupo_trabajo.sh.sh', herramienta);
+            if(pWin.activa){
+            let herraux=`"UUID=$(blkid -s UUID -o value /dev/sd${pWin.disco + pWin.particion})"`;
+            let herraux2=`# umount /dev/sd${pWin.disco + pWin.particion}\n`;
+            if( pResW.activa){
+                herraux+=` "UUID=$(blkid -s UUID -o value /dev/sd${pResW.disco + pResW.particion})"`;
+                herraux2+=`# umount /dev/sd${pResW.disco + pResW.particion}\n`;
+            }
+            if( pResW2.activa){
+                herraux+=` "UUID=$(blkid -s UUID -o value /dev/sd${pResW2.disco + pResW2.particion})"`;
+                herraux2+=`# umount /dev/sd${pResW2.disco + pResW2.particion}\n`;
+            }
+            herramienta=`#!/bin/bash
+
+## Tras la instalación de MAX, se montan automáticamente las particiones que usamos para administrar SRP y
+## la propia de windows, como son particiones que los usuarios normales no es conveniente que pueda ni siquiera ver
+## ya que si se hicieran cambios no autorizados podrían dañar el funcionamiento de windows y/o el sistema de 
+## restauracion, con este script se pretende que queden sin montar y por tanto ocultas a los usuarios de MAX.
+## Si el administrador del equipo precisara acceder a ellas conociendo sus discos y particiones de la configuración
+## del disco/discos que se creo en el momento de elaborar el SRP (tambien se pueden ver usando gparted), puede proceder 
+## a montarlas manualmente dentro de MAX.
+
+# Asegúrate de que el script se ejecute como root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Este script debe ejecutarse como root. Usa sudo."
+    exit 1
+fi
+
+# Las particiones que se desean ocultar
+particiones=(${herraux})
+
+# Modificar el archivo /etc/fstab para ocultar las particiones de Windows
+for particion in "`+'${particiones[@]}'+`"; do
+    # Verificar si la partición ya está en fstab
+    grep -q "$particion" /etc/fstab
+    if [ $? -ne 0 ]; then
+        echo "No se encontró la partición $particion en /etc/fstab. Se agregará para evitar su montaje automático."
+        echo "$particion /mnt/none ntfs defaults,nofail 0 0" >> /etc/fstab
+    else
+        echo "La partición $particion ya está configurada en /etc/fstab."
+    fi
+done
+
+echo "Las particiones de Windows se han configurado para no montarse automáticamente."
+
+# Opcional: Si quieres desmontar inmediatamente las particiones (en caso de que ya estén montadas):
+${herraux2}`;
+            folder4.file('ocultar_particiones_windows.sh', herramienta);
+            let folder5 = zip.folder("herramientas/clonado");
+            herramienta=`#!/bin/bash
+
+# Si se clona el disco ya configurado con carpetas para los distintos arranques en la 
+# carpeta EFI en el nuevo equipo además del disco ya clonado es necesario crear
+# en el firmware al menos la entrada para SRP para que desde ella mediante los menús 
+# nos permita accdeder a los otros SO. (Windows suele crear la suya al arrancar si no
+# encuentra una entrada para windows ya configurada y además la pone como primera, por
+# lo que si es así tras el primer arranque de windows habrà  que volver a poner como
+# primera la entrada SRP usando la herramienta PonerPrimeraLaEntradaSRPenEFI.sh.
+
+# Crea en el firmware del equipo la entrada SRP apuntando a la carpeta EFI/SRP/grubx64.efi
+efibootmgr --create --disk /dev/sda --part 1 --label "SRP" --loader '\\EFI\\SRP\\grubx64.efi'`;
+            folder5.file('CreaEntradaSRPPostClonado.sh', herramienta);
+            }
+            
+            
+            
+            //CARGAMOS LOS FONDOS DE LOS MENUS
+            cargarImagenes(zip).then(() => {
+                zip.generateAsync({ type: "blob" }).then(function (content) {
+                    let a = document.createElement("a");
+                    a.href = URL.createObjectURL(content);
+                    a.download = "srp.zip";
+                    a.click();
+                });
+            });
+        }
+        const numDisco = (letra) => {
+            switch (letra) {
+                case 'a': return 0;
+                case 'b': return 1;
+                case 'c': return 2;
+                case 'd': return 3;
+                case 'e': return 4;
+                case 'f': return 5;
+                case 'g': return 6;
+                case 'h': return 7;
+            }
+        }
+        function reemplazarTexto(inputText, name, replacement) {
+            //let inputText = document.getElementById("inputText").value;
+            //let name = document.getElementById("searchName").value;
+            //let replacement = document.getElementById("replaceText").value;
+
+            let marcaIni = "##--" + name + "--##";
+            let marcaFin = "##--fin " + name + "--##";
+            let aux = inputText.split(marcaIni);
+            let cabecera = aux[0];//alert(cabecera)
+            aux = aux[1].split(marcaFin);
+            let cola = aux[1];
+            let result = cabecera + marcaIni + '\n' + replacement + '\n' + marcaFin + cola;
+
+            //let regex = new RegExp("##--" + name + "--##([\\s\S]*?)##--fin " + name + "--##", "g");
+            //let result = inputText.replace(regex, `##--${name}--##\n${replacement}\n##--fin ${name}--##`);
+
+            //document.getElementById("outputText").value = result;
+            return result
+        }
+        
+        //para generar la encriptacion de la contraseña, es un proceso lento que se lanza en paralelo y se chequea que esta encriptada mediante este semaforo
+        
+        let estaEncriptada=false
+        function generatePBKDF2() {
+            // Obtención de los valores introducidos
+            const password = document.getElementById('password').value;
+            const iterations = 10000;// parseInt(document.getElementById('iterations').value, 10);
+            const keylen = 64;// parseInt(document.getElementById('keylen').value, 10);
+
+            if (password === '') {
+                alert("Por favor, ingresa una contraseña.");
+                return;
+            }
+
+            //const saltHex = "C40F196D0D81371D66A88443FC8697C1E7695B88F33A9B371C4FF379D7380622F8C828292B617868B4A8746D30AFE25B37606C1D8E015EE49F5415F822D8D18E"; // Salt en HEX
+            let simbolos = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'];
+            let saltHex = '';
+            for (let i = 0; i < 128; i++) {
+                let aux = Math.floor(16 * Math.random())
+                saltHex += simbolos[aux];
+            }
+            //const iterations = 10000;
+            const keySizeBytes = keylen//64; // 64 bytes para SHA512
+
+            // Convertir salt de HEX a WordArray (formato requerido por CryptoJS)
+            const salt = CryptoJS.enc.Hex.parse(saltHex);
+
+            // Generar clave PBKDF2 en hexadecimal
+            const derivedKey = CryptoJS.PBKDF2(password, salt, {
+                keySize: keySizeBytes / 4, // CryptoJS usa "palabras" de 32 bits, 64 bytes = 16 palabras
+                iterations: iterations,
+                hasher: CryptoJS.algo.SHA512
+            });
+
+            // Convertir clave derivada a HEX y asegurarse de que esté en mayúsculas
+            const derivedKeyHex = derivedKey.toString(CryptoJS.enc.Hex).toUpperCase();
+
+            // Formato final igual a GRUB
+            const grubHash = `grub.pbkdf2.sha512.${iterations}.${saltHex}.${derivedKeyHex}`;
+
+           
+            document.getElementById('hashedPassword').value = grubHash;
+            document.getElementById('hashedPassword').style.visibility = 'visible';
+            //document.getElementById('result').style.display = 'block';
+            estaEncriptada=true;
+        }
+        //funcion para ver que las contrseñas solo sean letras y numeros
+        function validarTexto(input) {
+           // Expresión regular que permite solo letras (mayúsculas y minúsculas) y números
+           const regex = /^[A-Za-z0-9]+$/;
+  
+           // Verifica si el valor cumple con la expresión regular
+           return regex.test(input);
+       }
+
+    </script>
+</body>
+
+</html>
