@@ -201,7 +201,7 @@
                     div.appendChild(label);
                     div.appendChild(discoSelect);
                     div.appendChild(select);
-                    if (clave !== 'particionEFI' && clave !== 'particionSRPBACKUP' && clave !== 'particionSRP') div.appendChild(checkbox);
+                    if (/*clave !== 'particionEFI' &&*/ clave !== 'particionSRPBACKUP' && clave !== 'particionSRP') div.appendChild(checkbox);
                     if (clave === 'particionSRPBACKUP') {
                         let label = document.createElement("label");
                         label.innerText = 'user: madrid => clave: ';
@@ -406,18 +406,18 @@ G2P2_FS="swap"
 #G3P1_LABEL="Datos"
 #G3P1_FS="ntfs"
 ###############################################################################
-G4_NP=1
-G4_MENU="EFI"
+${pEFI.activa?'':'#'}G4_NP=1
+${pEFI.activa?'':'#'}G4_MENU="EFI"
 #------------------------------------------------------------------------------
-G4P1_DEV="/dev/sd${pEFI.disco + pEFI.particion}"
-G4P1_LABEL_MENU="EFI"
-G4P1_LABEL="EFI"
-G4P1_FS="fat32"
+${pEFI.activa?'':'#'}G4P1_DEV="/dev/sd${pEFI.disco + pEFI.particion}"
+${pEFI.activa?'':'#'}G4P1_LABEL_MENU="EFI"
+${pEFI.activa?'':'#'}G4P1_LABEL="EFI"
+${pEFI.activa?'':'#'}G4P1_FS="fat32"
 ###############################################################################              
 `;
                     folder.file(archivo.nombre, aux);
                 } else {
-                    if(['autorun1','autorun2','autorun3','autorun8','autorun9','autorunA','funciones.sh'].includes(archivo.nombre)){
+                    if(['autorun1','autorun2','autorun3','autorun8','funciones.sh'].includes(archivo.nombre)){
                         folder.file(archivo.nombre, archivo.contenido);
                     }else{
                         if(['autorun4','autorun6'].includes(archivo.nombre)&&pWin.activa){
@@ -434,6 +434,9 @@ G4P1_FS="fat32"
                         if(['autorun5','autorun7'].includes(archivo.nombre)&&pMAX.activa){
                             folder.file(archivo.nombre, archivo.contenido);    
                         }
+                        if(['autorun9','autorunA'].includes(archivo.nombre)&&pEFI.activa){
+                            folder.file(archivo.nombre, archivo.contenido);    
+                        }
                         if(['autorunB'].includes(archivo.nombre)){
                             texto=archivo.contenido;
                             if(!pWin.activa){
@@ -441,6 +444,9 @@ G4P1_FS="fat32"
                             }
                             if(!pMAX.activa){
                                 texto = reemplazarTexto(texto, 'entrada MAX', '');
+                            }
+                            if(!pEFI.activa){
+                                texto = reemplazarTexto(texto, 'entrada EFI', '');
                             }
                             folder.file(archivo.nombre, texto);
                         }
@@ -460,8 +466,8 @@ G4P1_FS="fat32"
                     
                     let aux = `set pSRP=(hd${numDisco(pSRP.disco)},${pSRP.particion})  # Definir la variable
 export pSRP       # Hacerla global
-set pEFI=(hd${numDisco(pEFI.disco)},${pEFI.particion})  
-export pEFI   
+${pEFI.activa?'':'#'}set pEFI=(hd${numDisco(pEFI.disco)},${pEFI.particion})  
+${pEFI.activa?'':'#'}export pEFI   
 #set pWIN=(hd0,3)  
 #export pWIN
 set pMAX=(hd${numDisco(pMAX.disco)},${pMAX.particion})  
@@ -472,8 +478,21 @@ export superusers
 password_pbkdf2 consejeria ${document.getElementById('hashedPassword').value}
 password madrid ${configuracion.users[0].pass}
 `;
-
+                    let legacyWIN=`menuentry "Iniciar Windows" --unrestricted {
+set root=(hd${numDisco(pWin.disco)},${pWin.particion})
+chainloader +1
+}`;
+                    let legacyMAX=`menuentry "Iniciar MAX" --unrestricted {
+set root=(hd${numDisco(pMAX.disco)},${pMAX.particion})
+chainloader +1
+}`;
+//alert('win: '+legacyWIN+'\nMAX: '+legacyMAX);
+		
                     texto = reemplazarTexto(texto, 'variables globales grub', aux)
+                    if(!pEFI.activa){
+                        texto = reemplazarTexto(texto, 'entrada windows', legacyWIN)
+                        texto = reemplazarTexto(texto, 'entrada MAX', legacyMAX)
+                    }
                     if (!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows', '')
                     if (!pMAX.activa) texto = reemplazarTexto(texto, 'entrada MAX', '')
                 }
@@ -481,6 +500,7 @@ password madrid ${configuracion.users[0].pass}
                     if (!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows', '')
                     if (!pMAX.activa) texto = reemplazarTexto(texto, 'entrada MAX', '')
                     if (!pMAX.activa||!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows y MAX', '')
+                    if (!pEFI.activa) texto = reemplazarTexto(texto, 'entrada EFI', '')
                 }
                 if (archivo.nombre === 'menucopia2.cfg') {
                     if (!pWin.activa){ 
@@ -496,9 +516,12 @@ password madrid ${configuracion.users[0].pass}
                         texto = reemplazarTexto(texto, 'entrada windows y MAX', '');
                         texto = reemplazarTexto(texto, 'entrada windows y MAX2', '');
                     }
+                    if (!pEFI.activa) {
+                        texto = reemplazarTexto(texto, 'entrada EFI', '');
+                        texto = reemplazarTexto(texto, 'entrada EFI2', '');
+                    }
                 }
-                if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menugeneEFI2.cfg', 'menuprincipal.cfg',
-                'menurestEFI1.cfg', 'menurestEFI2.cfg'].includes(archivo.nombre)) {
+                if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menuprincipal.cfg'].includes(archivo.nombre)) {
                     folder2.file(archivo.nombre, texto);
                 }else{
                     if(pWin.activa&&['menugenewin2.cfg','menurestwin1.cfg', 'menurestwin2.cfg'].includes(archivo.nombre)){
@@ -508,6 +531,9 @@ password madrid ${configuracion.users[0].pass}
                         folder2.file(archivo.nombre, texto);
                     }
                     if(pWin.activa&&pMAX.activa&&['menugenewinmax2.cfg','menurestwinmax1.cfg', 'menurestwinmax2.cfg'].includes(archivo.nombre)){
+                        folder2.file(archivo.nombre, texto);
+                    }
+                    if(pEFI.activa&&['menugeneEFI2.cfg','menurestEFI1.cfg', 'menurestEFI2.cfg'].includes(archivo.nombre)){
                         folder2.file(archivo.nombre, texto);
                     }
                 }               
@@ -524,12 +550,12 @@ password madrid ${configuracion.users[0].pass}
 
             let herramienta=`#!/bin/bash
 
-## Crea las carpetas necesarias y monta en ella las particiones que contienen EFI, SRPBACUP y SRP.
+## Crea las carpetas necesarias y monta en ella las particiones que contienen ${pEFI.activa?'EFI, ':''}SRPBACUP y SRP.
 
-#creamos la carpeta EFI para contener la particion EFI
-mkdir /mnt/EFI
-#montamos la particion EFI en esa carpeta
-mount /dev/sd${pEFI.disco + pEFI.particion} /mnt/EFI
+${pEFI.activa?'':'#'}#creamos la carpeta EFI para contener la particion EFI
+${pEFI.activa?'':'#'}mkdir /mnt/EFI
+${pEFI.activa?'':'#'}#montamos la particion EFI en esa carpeta
+${pEFI.activa?'':'#'}mount /dev/sd${pEFI.disco + pEFI.particion} /mnt/EFI
 
 #creamos la carpeta SRPBACKUP para contener la particion SRPBACKUP
 mkdir /mnt/SRPBACKUP
@@ -540,16 +566,22 @@ mount /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion} /mnt/SRPBACKUP
 mkdir /mnt/SRP
 #montamos la particion SRP en esa carpeta
 mount /dev/sd${pSRP.disco + pSRP.particion} /mnt/SRP`;
-            folder3.file('MontaEFI_SRPBACUP_SRP.sh', herramienta);
-            herramienta=`#!/bin/bash
+            folder3.file('Monta'+(pEFI.activa?'EFI_':'')+'SRPBACUP_SRP.sh', herramienta);
+            herramienta=pEFI.activa?`#!/bin/bash
 
 # Creamos la entrada en arranque EFI para arrancar con grub desde la partición SRPBACKUP:
 #    -Esa entrada aparecera con etiqueta SRP en la lista de entradas del firmware;
 #    -Se crea dentro de la carpeta EFI de la particion EFI, la carpeta SRP para esta entrada.
 
 grub-install --target=x86_64-efi --recheck --efi-directory=/mnt/EFI/ --boot-directory=/mnt/SRPBACKUP/boot/ --bootloader-id=SRP
+`:`#!/bin/bash
+
+# instalamos grup para arrancar con grub desde la partición SRPBACKUP en el mbr del disco a.
+grub-install --no-floppy --root-directory=/mnt/SRPBACUP /dev/sda
 `;
-            folder3.file('CrearEntradaGrubEFI.sh', herramienta);
+
+
+            folder3.file(pEFI.activa?'CrearEntradaGrubEFI.sh':'InstalrGrubEnMBRsda.sh', herramienta);
             
             herramienta=`#!/bin/bash
 
@@ -572,8 +604,10 @@ sudo efibootmgr -o $ORDER
 echo "Nuevo orden de arranque:"
 efibootmgr
 `;
-
-            folder3.file('PonerPrimeraLaEntradaSRPenEFI.sh', herramienta);
+            //Solo si hay arranque UEFI
+            if(pEFI.activa){
+               folder3.file('PonerPrimeraLaEntradaSRPenEFI.sh', herramienta);
+            }
             let folder4 = zip.folder("herramientas/MAX");
             herramienta=`#!/bin/bash
 
