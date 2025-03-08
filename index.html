@@ -479,7 +479,7 @@ password_pbkdf2 consejeria ${document.getElementById('hashedPassword').value}
 password madrid ${configuracion.users[0].pass}
 `;
                     let legacyWIN=`menuentry "Iniciar Windows" --unrestricted {
-set root=(hd${numDisco(pWin.disco)},${pWin.particion})
+set root=(hd${numDisco(pResW.disco)},${pResW.particion})
 chainloader +1
 }`;
                     let legacyMAX=`menuentry "Iniciar MAX" --unrestricted {
@@ -490,6 +490,11 @@ chainloader +1
 		
                     texto = reemplazarTexto(texto, 'variables globales grub', aux)
                     if(!pEFI.activa){
+                        if(!pResW.activa&&pWin.activa){
+                            alert('En arranque legacy es la particion reservada para el sistiema primera la que windows utiliaza para arrancar ');
+                            //finalizamos sin generar el zip por ese error
+                            return;
+                        }
                         texto = reemplazarTexto(texto, 'entrada windows', legacyWIN)
                         texto = reemplazarTexto(texto, 'entrada MAX', legacyMAX)
                     }
@@ -577,7 +582,7 @@ grub-install --target=x86_64-efi --recheck --efi-directory=/mnt/EFI/ --boot-dire
 `:`#!/bin/bash
 
 # instalamos grup para arrancar con grub desde la partición SRPBACKUP en el mbr del disco a.
-grub-install --no-floppy --root-directory=/mnt/SRPBACUP /dev/sda
+grub-install --no-floppy --root-directory=/mnt/SRPBACKUP /dev/sda
 `;
 
 
