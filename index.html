@@ -255,8 +255,17 @@
                 errorMsg += "Error: La partición EFI debe estar en el disco 'a'.\n";
             }
             if(!estaEncriptada)generatePBKDF2();//solo si no se ha encriptado previamente se lanza
+            //comprobamos que si usammos windows legacy esta activada la primera particion de recuperacion
+            let pWin = configuracion.particiones[2].particionWIN;
+            let pResW = configuracion.particiones[2].particionRES;
+            let pEFI = configuracion.particiones[0].particionEFI;
+            if(!pEFI.activa&&pWin.activa&&!pResW.activa){
+                errorMsg+='Error: En arranque legacy es la primera particion reservada para el sistiema la que windows utiliaza para arrancar.\n\tDebe por tanto estar seleccionada.\n';
+
+            }
+            //alert(!pEFI.activa&&pWin.activa&&!pResW.activa+'****')
+            //alert(errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion));
             document.getElementById("error").innerText = errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion);
-            //alert('errorMsg: '+errorMsg+'; '+(errorMsg===''));
             return errorMsg==='';
         }
 
@@ -490,11 +499,6 @@ chainloader +1
 		
                     texto = reemplazarTexto(texto, 'variables globales grub', aux)
                     if(!pEFI.activa){
-                        if(!pResW.activa&&pWin.activa){
-                            alert('En arranque legacy es la particion reservada para el sistiema primera la que windows utiliaza para arrancar ');
-                            //finalizamos sin generar el zip por ese error
-                            return;
-                        }
                         texto = reemplazarTexto(texto, 'entrada windows', legacyWIN)
                         texto = reemplazarTexto(texto, 'entrada MAX', legacyMAX)
                     }
