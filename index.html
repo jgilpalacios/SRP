@@ -46,19 +46,20 @@
 <body>
     <h1>Gestor de Particiones</h1>
     <p><label for="numDiscos">Número de discos:</label>
-    <select id="numDiscos" onchange="actualizarDiscos()">
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-    </select></p>
+        <select id="numDiscos" onchange="actualizarDiscos()">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+    </p>
 
     <div class="tabs" id="tabs"></div>
     <div id="menu" class="menu"></div>
     <button onclick="comprobarErrores()">Comprobación</button><button onclick="generarZip()">Descargar SRP.ZIP</button>
     <p id="error"></p>
     <!--Parseador-->
-    
+
 
     <script>
         let configuracion = {
@@ -107,11 +108,11 @@
         contrasenna.onmouseover = () => { contrasenna.type = 'text' }
         contrasenna.onmouseout = () => { contrasenna.type = 'password' }
         contrasenna.onchange = () => {
-          if(validarTexto(contrasenna.value)) configuracion.users[0].pass = contrasenna.value;
-          else {
-            alert('Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.');
-            contrasenna.value=configuracion.users[0].pass;
-          }
+            if (validarTexto(contrasenna.value)) configuracion.users[0].pass = contrasenna.value;
+            else {
+                alert('Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.');
+                contrasenna.value = configuracion.users[0].pass;
+            }
         }
 
         let ccontrasenna = document.createElement("input");
@@ -123,15 +124,15 @@
         ccontrasenna.onmouseover = () => { ccontrasenna.type = 'text' }
         ccontrasenna.onmouseout = () => { ccontrasenna.type = 'password' }
         ccontrasenna.onchange = () => {
-          estaEncriptada=false;
-          document.getElementById('hashedPassword').style.visibility = 'hidden';
-          if(validarTexto(ccontrasenna.value)){
-            configuracion.users[1].pass = ccontrasenna.value;
-            setTimeout(generatePBKDF2, 1);//lanzamos en paralelo la encriptacion
-          }else {
-            alert('Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.');
-            ccontrasenna.value=configuracion.users[1].pass;
-          }
+            estaEncriptada = false;
+            document.getElementById('hashedPassword').style.visibility = 'hidden';
+            if (validarTexto(ccontrasenna.value)) {
+                configuracion.users[1].pass = ccontrasenna.value;
+                setTimeout(generatePBKDF2, 1);//lanzamos en paralelo la encriptacion
+            } else {
+                alert('Utilize sólo letras y números para la contraseña,\nLas letras acentuadas y la letra ñ no son válidas.');
+                ccontrasenna.value = configuracion.users[1].pass;
+            }
         }
 
         let hashedPassword = document.createElement("input");
@@ -254,19 +255,19 @@
             if (efi && efi.particionEFI.disco !== 'a') {
                 errorMsg += "Error: La partición EFI debe estar en el disco 'a'.\n";
             }
-            if(!estaEncriptada)generatePBKDF2();//solo si no se ha encriptado previamente se lanza
+            if (!estaEncriptada) generatePBKDF2();//solo si no se ha encriptado previamente se lanza
             //comprobamos que si usammos windows legacy esta activada la primera particion de recuperacion
             let pWin = configuracion.particiones[2].particionWIN;
             let pResW = configuracion.particiones[2].particionRES;
             let pEFI = configuracion.particiones[0].particionEFI;
-            if(!pEFI.activa&&pWin.activa&&!pResW.activa){
-                errorMsg+='Error: En arranque legacy es la primera particion reservada para el sistiema la que windows utiliaza para arrancar.\n\tDebe por tanto estar seleccionada.\n';
+            if (!pEFI.activa && pWin.activa && !pResW.activa) {
+                errorMsg += 'Error: En arranque legacy es la primera particion reservada para el sistiema la que windows utiliza para arrancar.\n\tDebe por tanto estar seleccionada.\n';
 
             }
             //alert(!pEFI.activa&&pWin.activa&&!pResW.activa+'****')
             //alert(errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion));
             document.getElementById("error").innerText = errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion);
-            return errorMsg==='';
+            return errorMsg === '';
         }
 
         cargarTabs();
@@ -298,9 +299,9 @@
         }
 
         function generarZip() {
-            if (!comprobarErrores()){//si hay errores se avisa y no generamos srp.zip
-              alert('Revisa los errores encontrados en la configuración');
-              return;              
+            if (!comprobarErrores()) {//si hay errores se avisa y no generamos srp.zip
+                alert('Revisa los errores encontrados en la configuración');
+                return;
             }
             let zip = new JSZip();
             // en folder incluiremos los scripts de autorun que la base está en la variable autorun que se carga de autorun.js
@@ -316,18 +317,18 @@
             if (pSWAP.activa) textoSWAP = '/dev/sd' + pSWAP.disco + pSWAP.particion;
             let pSRP = configuracion.particiones[1].particionSRP;
             let pSRPBACKUP = configuracion.particiones[1].particionSRPBACKUP;
-            let ngrupos=0;
-            [pWin,pMAX,pSWAP].forEach(grupo=>{
-                if(grupo.activa)ngrupos++;
+            let ngrupos = 0;
+            [pWin, pMAX, pSWAP].forEach(grupo => {
+                if (grupo.activa) ngrupos++;
             });
-            ngWin=1;//al menos estaría la de windows si se llega a crear
-            if(pResW.activa)ngWin++;
-            if(pResW2.activa)ngWin++;
+            ngWin = 1;//al menos estaría la de windows si se llega a crear
+            if (pResW.activa) ngWin++;
+            if (pResW2.activa) ngWin++;
             //para máx se deja fijo 2 ya que aunque no haya swap se gestiona con no_hay_swap en el device
             //para efi dejamos fijo 1
             autorun.forEach(archivo => {
                 if (archivo.nombre === 'autorun0') {
-                //El archivo autorun0 se hace todo desde aquí no se usa la plantilla de autorun.js     
+                    //El archivo autorun0 se hace todo desde aquí no se usa la plantilla de autorun.js     
                     let aux = `# version: SRP v2.0 #\n\n# Nombre de la particion que contiene los backups y los menus de GRUB;
 BACKUP_DEV="/dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion}"
 # SRP_DEV Particion que contiene el sofware de Sytem Rescue CD, que ejercuta los procesos
@@ -369,14 +370,14 @@ NG=${ngrupos}
                     if (pWin.activa) {
                         aux += `G1_NP=${ngWin}
 G1_MENU="Windows"\n`;
-                        if (pResW.activa) {   
-                            aux+=`#------------------------------------------------------------------------------
+                        if (pResW.activa) {
+                            aux += `#------------------------------------------------------------------------------
 G1P1_DEV="/dev/sd${pResW.disco + pResW.particion}"
 G1P1_LABEL_MENU=""
 G1P1_LABEL="Reservado para el sistema"
 G1P1_FS="ntfs"\n`;
                         }
-                        aux+=`#------------------------------------------------------------------------------
+                        aux += `#------------------------------------------------------------------------------
 G1P2_DEV="/dev/sd${pWin.disco + pWin.particion}"
 G1P2_LABEL_MENU="Windows"
 G1P2_LABEL="Windows"
@@ -415,46 +416,46 @@ G2P2_FS="swap"
 #G3P1_LABEL="Datos"
 #G3P1_FS="ntfs"
 ###############################################################################
-${pEFI.activa?'':'#'}G4_NP=1
-${pEFI.activa?'':'#'}G4_MENU="EFI"
+${pEFI.activa ? '' : '#'}G4_NP=1
+${pEFI.activa ? '' : '#'}G4_MENU="EFI"
 #------------------------------------------------------------------------------
-${pEFI.activa?'':'#'}G4P1_DEV="/dev/sd${pEFI.disco + pEFI.particion}"
-${pEFI.activa?'':'#'}G4P1_LABEL_MENU="EFI"
-${pEFI.activa?'':'#'}G4P1_LABEL="EFI"
-${pEFI.activa?'':'#'}G4P1_FS="fat32"
+${pEFI.activa ? '' : '#'}G4P1_DEV="/dev/sd${pEFI.disco + pEFI.particion}"
+${pEFI.activa ? '' : '#'}G4P1_LABEL_MENU="EFI"
+${pEFI.activa ? '' : '#'}G4P1_LABEL="EFI"
+${pEFI.activa ? '' : '#'}G4P1_FS="fat32"
 ###############################################################################              
 `;
                     folder.file(archivo.nombre, aux);
                 } else {
-                    if(['autorun1','autorun2','autorun3','autorun8','funciones.sh'].includes(archivo.nombre)){
+                    if (['autorun1', 'autorun2', 'autorun3', 'autorun8', 'funciones.sh'].includes(archivo.nombre)) {
                         folder.file(archivo.nombre, archivo.contenido);
-                    }else{
-                        if(['autorun4','autorun6'].includes(archivo.nombre)&&pWin.activa){
-                            texto=archivo.contenido;
-                            if (!pResW.activa){ 
+                    } else {
+                        if (['autorun4', 'autorun6'].includes(archivo.nombre) && pWin.activa) {
+                            texto = archivo.contenido;
+                            if (!pResW.activa) {
                                 texto = reemplazarTexto(texto, 'particion recuperacion windows', '');
                             }
-                            if (!pResW2.activa){
+                            if (!pResW2.activa) {
                                 texto = reemplazarTexto(texto, 'segunda particion recuperacion windows', '');
                             }
-                        
-                            folder.file(archivo.nombre, texto);    
+
+                            folder.file(archivo.nombre, texto);
                         }
-                        if(['autorun5','autorun7'].includes(archivo.nombre)&&pMAX.activa){
-                            folder.file(archivo.nombre, archivo.contenido);    
+                        if (['autorun5', 'autorun7'].includes(archivo.nombre) && pMAX.activa) {
+                            folder.file(archivo.nombre, archivo.contenido);
                         }
-                        if(['autorun9','autorunA'].includes(archivo.nombre)&&pEFI.activa){
-                            folder.file(archivo.nombre, archivo.contenido);    
+                        if (['autorun9', 'autorunA'].includes(archivo.nombre) && pEFI.activa) {
+                            folder.file(archivo.nombre, archivo.contenido);
                         }
-                        if(['autorunB'].includes(archivo.nombre)){
-                            texto=archivo.contenido;
-                            if(!pWin.activa){
+                        if (['autorunB'].includes(archivo.nombre)) {
+                            texto = archivo.contenido;
+                            if (!pWin.activa) {
                                 texto = reemplazarTexto(texto, 'entrada windows', '');
                             }
-                            if(!pMAX.activa){
+                            if (!pMAX.activa) {
                                 texto = reemplazarTexto(texto, 'entrada MAX', '');
                             }
-                            if(!pEFI.activa){
+                            if (!pEFI.activa) {
                                 texto = reemplazarTexto(texto, 'entrada EFI', '');
                             }
                             folder.file(archivo.nombre, texto);
@@ -468,15 +469,15 @@ ${pEFI.activa?'':'#'}G4P1_FS="fat32"
 
             //creamos los menúns de SRP en el arranque con grub EFI la base esta en los variable menus que proviene de srp.js
             let folder2 = zip.folder("srp/menus");
-            
+
             menus.forEach(archivo => {
-                let texto=archivo.contenido;
+                let texto = archivo.contenido;
                 if (archivo.nombre === 'menuprincipal.cfg') { //alert('siii'
-                    
+
                     let aux = `set pSRP=(hd${numDisco(pSRP.disco)},${pSRP.particion})  # Definir la variable
 export pSRP       # Hacerla global
-${pEFI.activa?'':'#'}set pEFI=(hd${numDisco(pEFI.disco)},${pEFI.particion})  
-${pEFI.activa?'':'#'}export pEFI   
+${pEFI.activa ? '' : '#'}set pEFI=(hd${numDisco(pEFI.disco)},${pEFI.particion})  
+${pEFI.activa ? '' : '#'}export pEFI   
 #set pWIN=(hd0,3)  
 #export pWIN
 set pMAX=(hd${numDisco(pMAX.disco)},${pMAX.particion})  
@@ -487,18 +488,18 @@ export superusers
 password_pbkdf2 consejeria ${document.getElementById('hashedPassword').value}
 password madrid ${configuracion.users[0].pass}
 `;
-                    let legacyWIN=`menuentry "Iniciar Windows" --unrestricted {
+                    let legacyWIN = `menuentry "Iniciar Windows" --unrestricted {
 set root=(hd${numDisco(pResW.disco)},${pResW.particion})
 chainloader +1
 }`;
-                    let legacyMAX=`menuentry "Iniciar MAX" --unrestricted {
+                    let legacyMAX = `menuentry "Iniciar MAX" --unrestricted {
 set root=(hd${numDisco(pMAX.disco)},${pMAX.particion})
 chainloader +1
 }`;
-//alert('win: '+legacyWIN+'\nMAX: '+legacyMAX);
-		
+                    //alert('win: '+legacyWIN+'\nMAX: '+legacyMAX);
+
                     texto = reemplazarTexto(texto, 'variables globales grub', aux)
-                    if(!pEFI.activa){
+                    if (!pEFI.activa) {
                         texto = reemplazarTexto(texto, 'entrada windows', legacyWIN)
                         texto = reemplazarTexto(texto, 'entrada MAX', legacyMAX)
                     }
@@ -508,11 +509,11 @@ chainloader +1
                 if (archivo.nombre === 'menucopia1.cfg') {
                     if (!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows', '')
                     if (!pMAX.activa) texto = reemplazarTexto(texto, 'entrada MAX', '')
-                    if (!pMAX.activa||!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows y MAX', '')
+                    if (!pMAX.activa || !pWin.activa) texto = reemplazarTexto(texto, 'entrada windows y MAX', '')
                     if (!pEFI.activa) texto = reemplazarTexto(texto, 'entrada EFI', '')
                 }
                 if (archivo.nombre === 'menucopia2.cfg') {
-                    if (!pWin.activa){ 
+                    if (!pWin.activa) {
                         texto = reemplazarTexto(texto, 'entrada windows', '');
                         texto = reemplazarTexto(texto, 'entrada windows2', '');
                         //alert(texto+'\n'+archivo.nombre+'\n'+archivo.contenido)
@@ -521,7 +522,7 @@ chainloader +1
                         texto = reemplazarTexto(texto, 'entrada MAX', '');
                         texto = reemplazarTexto(texto, 'entrada MAX2', '');
                     }
-                    if (!pMAX.activa||!pWin.activa) {
+                    if (!pMAX.activa || !pWin.activa) {
                         texto = reemplazarTexto(texto, 'entrada windows y MAX', '');
                         texto = reemplazarTexto(texto, 'entrada windows y MAX2', '');
                     }
@@ -532,24 +533,24 @@ chainloader +1
                 }
                 if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menuprincipal.cfg'].includes(archivo.nombre)) {
                     folder2.file(archivo.nombre, texto);
-                }else{
-                    if(pWin.activa&&['menugenewin2.cfg','menurestwin1.cfg', 'menurestwin2.cfg'].includes(archivo.nombre)){
+                } else {
+                    if (pWin.activa && ['menugenewin2.cfg', 'menurestwin1.cfg', 'menurestwin2.cfg'].includes(archivo.nombre)) {
                         folder2.file(archivo.nombre, texto);
                     }
-                    if(pMAX.activa&&['menugenemax2.cfg','menurestmax1.cfg', 'menurestmax2.cfg'].includes(archivo.nombre)){
+                    if (pMAX.activa && ['menugenemax2.cfg', 'menurestmax1.cfg', 'menurestmax2.cfg'].includes(archivo.nombre)) {
                         folder2.file(archivo.nombre, texto);
                     }
-                    if(pWin.activa&&pMAX.activa&&['menugenewinmax2.cfg','menurestwinmax1.cfg', 'menurestwinmax2.cfg'].includes(archivo.nombre)){
+                    if (pWin.activa && pMAX.activa && ['menugenewinmax2.cfg', 'menurestwinmax1.cfg', 'menurestwinmax2.cfg'].includes(archivo.nombre)) {
                         folder2.file(archivo.nombre, texto);
                     }
-                    if(pEFI.activa&&['menugeneEFI2.cfg','menurestEFI1.cfg', 'menurestEFI2.cfg'].includes(archivo.nombre)){
+                    if (pEFI.activa && ['menugeneEFI2.cfg', 'menurestEFI1.cfg', 'menurestEFI2.cfg'].includes(archivo.nombre)) {
                         folder2.file(archivo.nombre, texto);
                     }
-                }               
+                }
             });
-    /**
-     * Aqui añadimos los elementos de la carpeta herramientas, no se ha usado plantilla a diferencia de autorun.js y srp.js
-     */
+            /**
+             * Aqui añadimos los elementos de la carpeta herramientas, no se ha usado plantilla a diferencia de autorun.js y srp.js
+             */
             let folder3 = zip.folder("herramientas");
 
             //primero añadimos a dicha carpeta la configuración con que hemos generado menus de srp, scripts de autorun
@@ -557,14 +558,14 @@ chainloader +1
             folder3.file('configuración.txt', JSON.stringify(configuracion));
 
 
-            let herramienta=`#!/bin/bash
+            let herramienta = `#!/bin/bash
 
-## Crea las carpetas necesarias y monta en ella las particiones que contienen ${pEFI.activa?'EFI, ':''}SRPBACUP y SRP.
+## Crea las carpetas necesarias y monta en ella las particiones que contienen ${pEFI.activa ? 'EFI, ' : ''}SRPBACUP y SRP.
 
-${pEFI.activa?'':'#'}#creamos la carpeta EFI para contener la particion EFI
-${pEFI.activa?'':'#'}mkdir /mnt/EFI
-${pEFI.activa?'':'#'}#montamos la particion EFI en esa carpeta
-${pEFI.activa?'':'#'}mount /dev/sd${pEFI.disco + pEFI.particion} /mnt/EFI
+${pEFI.activa ? '' : '#'}#creamos la carpeta EFI para contener la particion EFI
+${pEFI.activa ? '' : '#'}mkdir /mnt/EFI
+${pEFI.activa ? '' : '#'}#montamos la particion EFI en esa carpeta
+${pEFI.activa ? '' : '#'}mount /dev/sd${pEFI.disco + pEFI.particion} /mnt/EFI
 
 #creamos la carpeta SRPBACKUP para contener la particion SRPBACKUP
 mkdir /mnt/SRPBACKUP
@@ -575,24 +576,24 @@ mount /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion} /mnt/SRPBACKUP
 mkdir /mnt/SRP
 #montamos la particion SRP en esa carpeta
 mount /dev/sd${pSRP.disco + pSRP.particion} /mnt/SRP`;
-            folder3.file('Monta'+(pEFI.activa?'EFI_':'')+'SRPBACUP_SRP.sh', herramienta);
-            herramienta=pEFI.activa?`#!/bin/bash
+            folder3.file('Monta' + (pEFI.activa ? 'EFI_' : '') + 'SRPBACUP_SRP.sh', herramienta);
+            herramienta = pEFI.activa ? `#!/bin/bash
 
 # Creamos la entrada en arranque EFI para arrancar con grub desde la partición SRPBACKUP:
 #    -Esa entrada aparecera con etiqueta SRP en la lista de entradas del firmware;
 #    -Se crea dentro de la carpeta EFI de la particion EFI, la carpeta SRP para esta entrada.
 
 grub-install --target=x86_64-efi --recheck --efi-directory=/mnt/EFI/ --boot-directory=/mnt/SRPBACKUP/boot/ --bootloader-id=SRP
-`:`#!/bin/bash
+`: `#!/bin/bash
 
 # instalamos grup para arrancar con grub desde la partición SRPBACKUP en el mbr del disco a.
 grub-install --no-floppy --root-directory=/mnt/SRPBACKUP /dev/sda
 `;
 
 
-            folder3.file(pEFI.activa?'CrearEntradaGrubEFI.sh':'InstalrGrubEnMBRsda.sh', herramienta);
-            
-            herramienta=`#!/bin/bash
+            folder3.file(pEFI.activa ? 'CrearEntradaGrubEFI.sh' : 'InstalrGrubEnMBRsda.sh', herramienta);
+
+            herramienta = `#!/bin/bash
 
 ## Ponemos en primer lugar del orden de arranque con el comando efibootmgr el arranque con SRP. 
 
@@ -614,11 +615,12 @@ echo "Nuevo orden de arranque:"
 efibootmgr
 `;
             //Solo si hay arranque UEFI
-            if(pEFI.activa){
-               folder3.file('PonerPrimeraLaEntradaSRPenEFI.sh', herramienta);
+            if (pEFI.activa) {
+                folder3.file('PonerPrimeraLaEntradaSRPenEFI.sh', herramienta);
             }
-            let folder4 = zip.folder("herramientas/MAX");
-            herramienta=`#!/bin/bash
+            if (pMAX.activa) {
+                let folder4 = zip.folder("herramientas/MAX");
+                herramienta = `#!/bin/bash
 
 ## Si hemos clonado MAX desde otro equipo, habrá que cambiar el nombre de equipo en MAX
 ## ya que al ser un clon mantendrá el del equipo de que procede.
@@ -644,8 +646,8 @@ hostname "$nuevo_nombre"
 # Confirmar que el cambio fue exitoso
 echo "El nombre del equipo ha sido cambiado a '$nuevo_nombre'."`;
 
-            folder4.file('cambiarNombreEquipo.sh', herramienta);
-            herramienta=`#!/bin/bash
+                folder4.file('cambiarNombreEquipo.sh', herramienta);
+                herramienta = `#!/bin/bash
 
 ## Normalmente en un aula de informatica los equipos de windows estan en una red
 ## dentro de un grupo de trabajo, con este escript se pretende facilitar que tras
@@ -674,19 +676,24 @@ systemctl restart smbd
 
 # Confirmar que el cambio fue exitoso
 echo "El grupo de trabajo ha sido cambiado a '$nuevo_grupo_trabajo'."`;
-            folder4.file('cambiar_grupo_trabajo.sh.sh', herramienta);
-            if(pWin.activa){
-            let herraux=`"UUID=$(blkid -s UUID -o value /dev/sd${pWin.disco + pWin.particion})"`;
-            let herraux2=`# umount /dev/sd${pWin.disco + pWin.particion}\n`;
-            if( pResW.activa){
-                herraux+=` "UUID=$(blkid -s UUID -o value /dev/sd${pResW.disco + pResW.particion})"`;
-                herraux2+=`# umount /dev/sd${pResW.disco + pResW.particion}\n`;
-            }
-            if( pResW2.activa){
-                herraux+=` "UUID=$(blkid -s UUID -o value /dev/sd${pResW2.disco + pResW2.particion})"`;
-                herraux2+=`# umount /dev/sd${pResW2.disco + pResW2.particion}\n`;
-            }
-            herramienta=`#!/bin/bash
+                folder4.file('cambiar_grupo_trabajo.sh', herramienta);
+                let herraux = `"UUID=$(blkid -s UUID -o value /dev/sd${pSRP.disco + pSRP.particion})"`;
+                let herraux2 = `# umount /dev/sd${pSRP.disco + pSRP.particion}\n`;
+                herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion})"`;
+                herraux2 += `# umount /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion}\n`;
+                if (pWin.activa) {
+                    herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pWin.disco + pWin.particion})"`;
+                    herraux2 += `# umount /dev/sd${pWin.disco + pWin.particion}\n`;
+                    if (pResW.activa) {
+                        herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pResW.disco + pResW.particion})"`;
+                        herraux2 += `# umount /dev/sd${pResW.disco + pResW.particion}\n`;
+                    }
+                    if (pResW2.activa) {
+                        herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pResW2.disco + pResW2.particion})"`;
+                        herraux2 += `# umount /dev/sd${pResW2.disco + pResW2.particion}\n`;
+                    }
+                }
+                herramienta = `#!/bin/bash
 
 ## Tras la instalación de MAX, se montan automáticamente las particiones que usamos para administrar SRP y
 ## la propia de windows, como son particiones que los usuarios normales no es conveniente que pueda ni siquiera ver
@@ -706,7 +713,7 @@ fi
 particiones=(${herraux})
 
 # Modificar el archivo /etc/fstab para ocultar las particiones de Windows
-for particion in "`+'${particiones[@]}'+`"; do
+for particion in "`+ '${particiones[@]}' + `"; do
     # Verificar si la partición ya está en fstab
     grep -q "$particion" /etc/fstab
     if [ $? -ne 0 ]; then
@@ -717,13 +724,15 @@ for particion in "`+'${particiones[@]}'+`"; do
     fi
 done
 
-echo "Las particiones de Windows se han configurado para no montarse automáticamente."
+echo "Las particiones de SRP${pWin.activa ? ' y Windows' : ''} se han configurado para no montarse automáticamente."
 
 # Opcional: Si quieres desmontar inmediatamente las particiones (en caso de que ya estén montadas):
 ${herraux2}`;
-            folder4.file('ocultar_particiones_windows.sh', herramienta);
-            let folder5 = zip.folder("herramientas/clonado");
-            herramienta=`#!/bin/bash
+                folder4.file('ocultar_particiones_SRP' + (pWin.activa ? '_windows' : '') + '.sh', herramienta);
+            }
+            if (pEFI.activa) {
+                let folder5 = zip.folder("herramientas/clonado");
+                herramienta = `#!/bin/bash
 
 # Si se clona el disco ya configurado con carpetas para los distintos arranques en la 
 # carpeta EFI en el nuevo equipo además del disco ya clonado es necesario crear
@@ -735,11 +744,11 @@ ${herraux2}`;
 
 # Crea en el firmware del equipo la entrada SRP apuntando a la carpeta EFI/SRP/grubx64.efi
 efibootmgr --create --disk /dev/sda --part 1 --label "SRP" --loader '\\EFI\\SRP\\grubx64.efi'`;
-            folder5.file('CreaEntradaSRPPostClonado.sh', herramienta);
+                folder5.file('CreaEntradaSRPPostClonado.sh', herramienta);
             }
-            
-            
-            
+
+
+
             //CARGAMOS LOS FONDOS DE LOS MENUS
             cargarImagenes(zip).then(() => {
                 zip.generateAsync({ type: "blob" }).then(function (content) {
@@ -781,10 +790,10 @@ efibootmgr --create --disk /dev/sda --part 1 --label "SRP" --loader '\\EFI\\SRP\
             //document.getElementById("outputText").value = result;
             return result
         }
-        
+
         //para generar la encriptacion de la contraseña, es un proceso lento que se lanza en paralelo y se chequea que esta encriptada mediante este semaforo
-        
-        let estaEncriptada=false
+
+        let estaEncriptada = false
         function generatePBKDF2() {
             // Obtención de los valores introducidos
             const password = document.getElementById('password').value;
@@ -822,20 +831,20 @@ efibootmgr --create --disk /dev/sda --part 1 --label "SRP" --loader '\\EFI\\SRP\
             // Formato final igual a GRUB
             const grubHash = `grub.pbkdf2.sha512.${iterations}.${saltHex}.${derivedKeyHex}`;
 
-           
+
             document.getElementById('hashedPassword').value = grubHash;
             document.getElementById('hashedPassword').style.visibility = 'visible';
             //document.getElementById('result').style.display = 'block';
-            estaEncriptada=true;
+            estaEncriptada = true;
         }
         //funcion para ver que las contrseñas solo sean letras y numeros
         function validarTexto(input) {
-           // Expresión regular que permite solo letras (mayúsculas y minúsculas) y números
-           const regex = /^[A-Za-z0-9]+$/;
-  
-           // Verifica si el valor cumple con la expresión regular
-           return regex.test(input);
-       }
+            // Expresión regular que permite solo letras (mayúsculas y minúsculas) y números
+            const regex = /^[A-Za-z0-9]+$/;
+
+            // Verifica si el valor cumple con la expresión regular
+            return regex.test(input);
+        }
 
     </script>
 </body>
