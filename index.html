@@ -638,13 +638,16 @@ read -p "Introduce el nuevo nombre para el equipo: " nuevo_nombre
 echo "$nuevo_nombre" > /etc/hostname
 
 # Cambiar el nombre del host en /etc/hosts (asegurarse de que la dirección 127.0.0.1 coincida con el nombre del host)
+#sed -i "s/127.0.0.1.*/127.0.0.1   $nuevo_nombre/" /etc/hosts
 sed -i "s/127.0.0.1.*/127.0.0.1   $nuevo_nombre/" /etc/hosts
 
 # Aplicar el cambio de nombre del host
-hostname "$nuevo_nombre"
+#hostname "$nuevo_nombre"
+hostnamectl set-hostname "$nuevo_nombre"
 
 # Confirmar que el cambio fue exitoso
-echo "El nombre del equipo ha sido cambiado a '$nuevo_nombre'."`;
+echo "✅ El nombre del equipo ha sido cambiado a '$nuevo_nombre'."
+#echo "El nombre del equipo ha sido cambiado a '$nuevo_nombre'."`;
 
                 folder4.file('cambiarNombreEquipo.sh', herramienta);
                 herramienta = `#!/bin/bash
@@ -677,28 +680,18 @@ systemctl restart smbd
 # Confirmar que el cambio fue exitoso
 echo "El grupo de trabajo ha sido cambiado a '$nuevo_grupo_trabajo'."`;
                 folder4.file('cambiar_grupo_trabajo.sh', herramienta);
-                let herraux = `"UUID=$(blkid -s UUID -o value /dev/sd${pSRP.disco + pSRP.particion})"`;
-                let herraux2 = `# umount /dev/sd${pSRP.disco + pSRP.particion}\n`;
-                herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion})"`;
-                herraux2 += `# umount /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion}\n`;
+                let herraux=('"/dev/'+pSRP.disco + pSRP.particion+'" "/dev/'+pSRPBACKUP.disco + pSRPBACKUP.particion+'"');
                 if (pWin.activa) {
-                    herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pWin.disco + pWin.particion})"`;
-                    herraux2 += `# umount /dev/sd${pWin.disco + pWin.particion}\n`;
-                    if (pResW.activa) {
-                        herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pResW.disco + pResW.particion})"`;
-                        herraux2 += `# umount /dev/sd${pResW.disco + pResW.particion}\n`;
-                    }
-                    if (pResW2.activa) {
-                        herraux += ` "UUID=$(blkid -s UUID -o value /dev/sd${pResW2.disco + pResW2.particion})"`;
-                        herraux2 += `# umount /dev/sd${pResW2.disco + pResW2.particion}\n`;
-                    }
+                    herraux+=(' "/dev/'+pWin.disco + pWin.particion+'"');
+                    if (pResW.activa) herraux+=(' "/dev/'+pResW.disco + pResW.particion+'"');
+                    if (pResW2.activa) herraux+=(' "/dev/'+pResW2.disco + pResW2.particion+'"');
                 }
+               
                 herramienta = `#!/bin/bash
-
-## Tras la instalación de MAX, se montan automáticamente las particiones que usamos para administrar SRP y
-## la propia de windows, como son particiones que los usuarios normales no es conveniente que pueda ni siquiera ver
-## ya que si se hicieran cambios no autorizados podrían dañar el funcionamiento de windows y/o el sistema de 
-## restauracion, con este script se pretende que queden sin montar y por tanto ocultas a los usuarios de MAX.
+## Tras la instalación de MAX, se montan automáticamente las particiones que usamos para administrar SRP${pWin.activa?` y
+## las propias de windows, `:',\n## '}como son particiones que los usuarios normales no es conveniente que pueda ni siquiera ver
+## ya que si se hicieran cambios no autorizados podrían dañar el funcionamiento ${pWin.activa?'de windows y/o el':'del'} sistema de 
+## restauración, con este script se pretende que queden sin montar y por tanto ocultas a los usuarios de MAX.
 ## Si el administrador del equipo precisara acceder a ellas conociendo sus discos y particiones de la configuración
 ## del disco/discos que se creo en el momento de elaborar el SRP (tambien se pueden ver usando gparted), puede proceder 
 ## a montarlas manualmente dentro de MAX.
@@ -709,25 +702,39 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-# Las particiones que se desean ocultar
+# Lista de particiones a ocultar
 particiones=(${herraux})
+# Procesar cada partición
+for particion in "`+'${particiones[@]}'+`"; do
+    # Obtener UUID y sistema de archivos
+    UUID=$(blkid -s UUID -o value "$particion" 2>/dev/null)
+    FSTYPE=$(blkid -s TYPE -o value "$particion" 2>/dev/null)
 
-# Modificar el archivo /etc/fstab para ocultar las particiones de Windows
-for particion in "`+ '${particiones[@]}' + `"; do
-    # Verificar si la partición ya está en fstab
-    grep -q "$particion" /etc/fstab
-    if [ $? -ne 0 ]; then
-        echo "No se encontró la partición $particion en /etc/fstab. Se agregará para evitar su montaje automático."
-        echo "$particion /mnt/none ntfs defaults,nofail 0 0" >> /etc/fstab
+    # Verificar si la partición existe
+    if [ -z "$UUID" ] || [ -z "$FSTYPE" ]; then
+        echo "❌ La partición $particion no existe o no tiene un UUID válido. Se omitirá."
+        continue
+    fi
+
+    # Verificar si ya está en /etc/fstab
+    if grep -q "UUID=$UUID" /etc/fstab; then
+        echo "✔ La partición $particion (UUID=$UUID) ya está en /etc/fstab. No se modificará."
     else
-        echo "La partición $particion ya está configurada en /etc/fstab."
+        echo "➕ Agregando $particion (UUID=$UUID) a /etc/fstab para evitar montaje automático..."
+        echo "UUID=$UUID /mnt/none $FSTYPE defaults,nofail 0 0" >> /etc/fstab
+    fi
+
+    # Desmontar si ya está montada
+    if findmnt -rno SOURCE "$particion" > /dev/null; then
+        echo "🔹 Desmontando $particion..."
+        umount "$particion"
+    else
+        echo "✔ $particion ya está desmontada."
     fi
 done
 
-echo "Las particiones de SRP${pWin.activa ? ' y Windows' : ''} se han configurado para no montarse automáticamente."
-
-# Opcional: Si quieres desmontar inmediatamente las particiones (en caso de que ya estén montadas):
-${herraux2}`;
+echo "✅ Configuración completada. Las particiones de SRP ${pWin.activa?'y  Windows ':''}ya no se montarán automáticamente."
+`;
                 folder4.file('ocultar_particiones_SRP' + (pWin.activa ? '_windows' : '') + '.sh', herramienta);
             }
             if (pEFI.activa) {
