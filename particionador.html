@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Particiones</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .disk-section,
+        .partition-section {
+            margin-bottom: 20px;
+        }
+
+        .partition-list div {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        button {
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Gestión de Particiones</h2>
+        <div class="disk-section">
+            <label for="diskCount">Número de Discos:</label>
+            <input type="number" id="diskCount" min="1" value="1" max="5">
+            <button onclick="setDisks()">Establecer</button>
+        </div>
+        <div id="disks"></div>
+        <button onclick="calculateNewPartitions()">Generar</button>
+    </div>
+
+    <script>
+        function setDisks() {
+            const diskContainer = document.getElementById('disks');
+            diskContainer.innerHTML = '';
+            const diskCount = document.getElementById('diskCount').value;
+            for (let i = 1; i <= diskCount; i++) {
+                const diskDiv = document.createElement('div');
+                diskDiv.classList.add('disk-section');
+                diskDiv.innerHTML = `
+                    <h3>Disco ${i}</h3>
+                    <label>Tipo de Tabla de Particiones:</label>
+                    <select id="tp${i}">                        
+                        <option value="gpt">gpt</option>
+                        <!--<option value="msdos">msdos</option>-->
+                    </select>
+                    <div class="partition-section">
+                        <h4>Particiones Presentes</h4>
+                        <button onclick="addPartition(this, 'present', ${i})">+</button>
+                        <div class="partition-list"></div>
+                    </div>
+                    <div class="partition-section">
+                        <h4>Particiones Nuevas</h4>
+                        <button onclick="addPartition(this, 'new', ${i})">+</button>
+                        <div class="partition-list"></div>
+                    </div>
+                `;
+                diskContainer.appendChild(diskDiv);
+            }
+        }
+
+        function addPartition(button, type, disk) {
+            const partitionContainer = button.nextElementSibling;
+            const existingPartitions = partitionContainer.children.length;
+            const presentPartitions = button.closest('.disk-section').querySelector('.partition-section .partition-list').children.length;
+            let partitionNumber;
+            let letra = 'a';
+            let tipoTabPart = document.getElementById(`tp${disk}`).value;
+            switch (disk) {
+                case 1:
+                    letra = 'a';
+                    break;
+                case 2:
+                    letra = 'b';
+                    break;
+                case 3:
+                    letra = 'c';
+                    break;
+                case 4:
+                    letra = 'd';
+                    break;
+                case 5:
+                    letra = 'e';
+                    break;
+            }
+
+            if (type === 'present') {
+                partitionNumber = presentPartitions + 1;
+            } else {
+                partitionNumber = presentPartitions + existingPartitions + 1;
+            }
+
+            const partitionDiv = document.createElement('div');
+            let optionPresent = `<option value="ntfs">ntfs</option>
+                    <option value="fat32">fat32</option>
+                    <option value="otro">otro</option>`;
+            let optionNew = `<option value="ext4">ext4</option>
+                    <option value="ntfs">ntfs</option>
+                    <option value="fat32">fat32</option>                 
+                    <option value="linux-swap">linux-swap</option>
+                    ${tipoTabPart === 'msdos' ? '<option value="partición extendida">partición extendida</option>' : ''}`;
+            partitionDiv.innerHTML = `
+                <label> sd${letra + partitionNumber} </label>
+                <select id="fs${letra + partitionNumber}">
+                    ${type === 'present' ? optionPresent : optionNew}
+                </select>
+                tamaño: <input id="sd${letra + partitionNumber}" type="text" placeholder="Tamaño" ${type === 'new' ? 'value="100%"' : ''}>MB
+                ${type === 'new' ? `<input type="text" id="et${letra + partitionNumber}" placeholder="Etiqueta">` : ` <input type="radio" name="PartaAreducir${letra}" value="${letra + partitionNumber}"> sd${letra + partitionNumber}`}
+                <button onclick="this.parentElement.remove()">Eliminar</button>
+            `;
+            partitionContainer.appendChild(partitionDiv);
+        }
+
+        function calculateNewPartitions() {
+            
+            let mensajes = '';
+            let ndiscos = document.getElementById('diskCount').value * 1;
+            let scripts = [];
+            let textoScripts = '#!/bin/bash\n\n';
+            let errores = '';
+            let partRedimensionar = 0;
+            let partLinusSwap = 0;
+            for (let i = 1; i <= ndiscos; i++) {
+                let tDiscSize=0;
+                let totalSize = 0;
+                let hastaReducir=0;
+                let sumamos=true;
+                let letra = ['a', 'b', 'c', 'd', 'e'][i - 1];
+                let PartaAreducir=obtenerSeleccion('PartaAreducir'+letra);
+                scripts[i - 1] = `###### Disco="/dev/sd${letra}" ######\n`;
+                let cola = `\n# Formatear las nuevas particiones de sd${letra}\n`
+                for (let j = 1; j < 128; j++) {
+                    
+                    
+                    let MBs = 0
+                    if (document.getElementById(`sd${letra + j}`)) {
+                        let value = document.getElementById(`sd${letra + j}`).value.trim();
+                        
+                        if (value !== "100%" && value !== "") {
+                            MBs = parseInt(value) || 0;
+                            //totalSize += MBs;
+                        }
+                        tDiscSize+=MBs;
+                        let fs = document.getElementById(`fs${letra + j}`).value;
+                        if (document.getElementById(`et${letra + j}`)) {
+                            totalSize += MBs;
+                            let etiqueta = document.getElementById(`et${letra + j}`).value;
+                            if (value !== "100%" && value !== "") scripts[i - 1] += `    mkpart primary ${fs} ${totalSize - MBs+hastaReducir}MB ${totalSize+hastaReducir}MB \\\n`;
+                            else scripts[i - 1] += `    mkpart primary ${fs} ${totalSize+hastaReducir}MB 100%\n`;
+                            if (fs === 'linux-swap') {
+                                cola += `mkswap /dev/sd${letra}${j} -L ${etiqueta}\n`;
+                                partLinusSwap++;
+                            }
+                            else cola += `mkfs.${fs} /dev/sd${letra}${j} -L ${etiqueta}\n`;
+                        } else {
+                            if (MBs > 0) {
+                                if(PartaAreducir===letra + j) {
+                                    totalSize += MBs;
+                                    sumamos=false
+                                    partRedimensionar++;
+                                    scripts[i - 1] += `# WIN_PART=sd${letra + j}
+#NEW_WIN_SIZE="${MBs}MB"  # ${Math.round(MBs * 100 / 1024) / 100}GB en MB
+
+# Redimensionar la partición de Windows a ${MBs}MB ${Math.round(MBs * 100 / 1024) / 100}GB
+ntfsresize --size ${MBs}MB /dev/sd${letra + j}
+
+# Usar parted para redimensionar y crear nuevas particiones en MB
+echo "Redimensionando partición de Windows y creando nuevas particiones..."
+parted --script /dev/sd${letra} \\
+    resizepart ${j} ${MBs}MB \\
+`;
+                                };
+                                if(sumamos) hastaReducir+=MBs;
+                                if (fs !== 'ntfs') errores += `La partición a redimensionar sd${letra + j} no es de tipo ntfs.\n`;
+                                
+                            }
+                        }
+
+                    } else { //nulo o indefinido
+                        break;
+                    }
+
+                }
+                scripts[i - 1] += cola + '\necho "Proceso completado con éxito en el disco sd' + letra + '."\n############################';
+                mensajes += `El tamaño total de las nuevas particiones y la reducida  y las viejas en sd${letra} es al menos: ${tDiscSize} MB\n`;
+                textoScripts += `### El disco sd${letra} debe tener mas de ${tDiscSize}MB. ###\n`+scripts[i - 1] + '\n\n';
+            }
+            if (partRedimensionar > 1) errores += `Se pide redimensionar ${partRedimensionar} particiones de Windows, solo está pensado para redimensionar 1.\n`;
+            if (partLinusSwap > 1) errores += `Se pide crear ${partLinusSwap} particiones de intercambio, solo está pensado para crear 1.\n`;
+            //alert(textoScripts);
+            if (errores !== '') {
+                downloadTextFile('particionador.sh', textoScripts);
+                alert('No se han detectado errores en la generación de scripts, se ha descargado el archivo particionador.sh,\n' +
+                    'no obstante el al ejecutarlo se reparticionará el disco(s) y si no fuera correcto podrían perderse los datos.\n' +
+                    'conviene que se disponga de copias de seguridad antes de ejecutarlo y ver que funciona correctamente.');
+            } else alert(errores)
+            alert(mensajes);
+        }
+        function downloadTextFile(filename, text) {
+            // Crear un Blob con el contenido de texto
+            const blob = new Blob([text], { type: 'text/plain' });
+
+            // Crear un enlace temporal
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+
+            // Simular un clic en el enlace para iniciar la descarga
+            document.body.appendChild(a);
+            a.click();
+
+            // Limpiar el DOM
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+        }
+        function obtenerSeleccion(nombre) {
+            //alert(nombre);
+            // Obtener el radio seleccionado
+            const seleccion = document.querySelector('input[name="'+nombre+'"]:checked');
+            return seleccion.value
+            // Verificar si se seleccionó algo
+            /*if (seleccion) {
+                document.getElementById("resultado").textContent = "Seleccionaste: " + seleccion.value;
+            } else {
+                document.getElementById("resultado").textContent = "No seleccionaste ninguna opción";
+            }*/
+        }
+    </script>
+</body>
+
+</html>
