@@ -121,7 +121,7 @@
                 <select id="fs${letra + partitionNumber}">
                     ${type === 'present' ? optionPresent : optionNew}
                 </select>
-                tamaño: <input id="sd${letra + partitionNumber}" type="text" placeholder="Tamaño" ${type === 'new' ? 'value="100%"' : ''}>MB
+                tamaño: <input id="sd${letra + partitionNumber}" type="text" placeholder="Tamaño" ${type === 'new' ? 'value="100%"' : ''}>MiB
                 ${type === 'new' ? `<input type="text" id="et${letra + partitionNumber}" placeholder="Etiqueta">` : ` <input type="radio" name="PartaAreducir${letra}" value="${letra + partitionNumber}"> sd${letra + partitionNumber}`}
                 <button onclick="this.parentElement.remove()">Eliminar</button>
             `;
@@ -164,8 +164,8 @@
                             let etiqueta = document.getElementById(`et${letra + j}`).value.trim();
                             if (etiqueta === 'SRP') nSRP++;
                             if (etiqueta === 'SRPBACKUP') nSRPBACKUP++;
-                            if (value !== "100%" && value !== "") scripts[i - 1] += `    mkpart primary ${fs} ${totalSize - MBs + hastaReducir}MB ${totalSize + hastaReducir}MB \\\n`;
-                            else scripts[i - 1] += `    mkpart primary ${fs} ${totalSize + hastaReducir}MB 100%\n`;
+                            if (value !== "100%" && value !== "") scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize - MBs + hastaReducir}MiB ${totalSize + hastaReducir}MiB \\\n`;
+                            else scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize + hastaReducir}MiB 100%\n`;
                             if (fs === 'linux-swap') {
                                 cola += `mkswap /dev/sd${letra}${j}`;
                                 partLinusSwap++;
@@ -177,18 +177,19 @@
                                 if (PartaAreducir === letra + j) {
                                     if (fs !== 'ntfs') errores += `La partición a redimensionar sd${letra + j} no es de tipo ntfs.\n`;
                                     totalSize += MBs;
-                                    sumamos = false
+                                    sumamos = false;
+                                    MBdec=Math.round(MBs/0.953674);
                                     //partRedimensionar++;
                                     scripts[i - 1] += `# WIN_PART=sd${letra + j}
-#NEW_WIN_SIZE="${MBs}MB"  # ${Math.round(MBs * 100 / 1024) / 100}GB en MB
+#NEW_WIN_SIZE="${MBs}MiB"  # ${Math.round(MBs * 100 / 1024) / 100}GB en MiB
 
-# Redimensionar la partición de Windows a ${MBs}MB ${Math.round(MBs * 100 / 1024) / 100}GB
-ntfsresize --size ${MBs}MB /dev/sd${letra + j}
+# Redimensionar la partición de Windows a ${MBs}MiB ${Math.round(MBs * 100 / 1024) / 100}GiB; ${MBdec}MB
+ntfsresize --size ${MBdec}M --force /dev/sd${letra + j}
 
-# Usar parted para redimensionar y crear nuevas particiones en MB
+# Usar parted para redimensionar y crear nuevas particiones en MiB
 echo "Redimensionando partición de Windows y creando nuevas particiones..."
-parted --script /dev/sd${letra} \\
-    resizepart ${j} ${MBs}MB \\
+parted --fix /dev/sd${letra} resizepart ${j} ${MBs+hastaReducir}MiB  
+parted --fix --script /dev/sd${letra} \\
 `;
                                 };
                                 if (sumamos) hastaReducir += MBs;
@@ -204,7 +205,7 @@ parted --script /dev/sd${letra} \\
                 }
                 scripts[i - 1] += cola + '\necho "Proceso completado con éxito en el disco sd' + letra + '."\n############################';
                 mensajes += `El tamaño total de las nuevas particiones y la reducida  y las viejas en sd${letra} es al menos: ${tDiscSize} MB\n`;
-                textoScripts += `### El disco sd${letra} debe tener mas de ${tDiscSize}MB. ###\n` + scripts[i - 1] + '\n\n';
+                textoScripts += `### El disco sd${letra} debe tener mas de ${tDiscSize}MiB. ###\n` + scripts[i - 1] + '\n\n';
             }
             //if (partRedimensionar < 1) errores += `Se pide redimensionar ${partRedimensionar} particiones de Windows, solo está pensado para redimensionar 1.\n`;
             if (partLinusSwap > 1) errores += `Se pide crear ${partLinusSwap} particiones de intercambio, puede haber 0 o 1.\n`;
