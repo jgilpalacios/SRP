@@ -170,7 +170,7 @@
                                 cola += `mkswap /dev/sd${letra}${j}`;
                                 partLinusSwap++;
                             }
-                            else cola += `mkfs.${fs} /dev/sd${letra}${j}`
+                            else cola += `mkfs.${fs} /dev/sd${letra}${j}${fs === 'ntfs'?' --fast':''}`;
                             etiqueta === '' ? cola += '\n' : cola += ` -L ${etiqueta}\n`;
                         } else {
                             if (MBs > 0) {
