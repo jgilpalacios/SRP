@@ -178,13 +178,13 @@
                                     if (fs !== 'ntfs') errores += `La partición a redimensionar sd${letra + j} no es de tipo ntfs.\n`;
                                     totalSize += MBs;
                                     sumamos = false;
-                                    MBdec=Math.round(MBs/0.953674);
+                                    MBdec=Math.floor(MBs*1.024*1.024);//0.953674);
                                     //partRedimensionar++;
                                     scripts[i - 1] += `# WIN_PART=sd${letra + j}
 #NEW_WIN_SIZE="${MBs}MiB"  # ${Math.round(MBs * 100 / 1024) / 100}GB en MiB
 
 # Redimensionar la partición de Windows a ${MBs}MiB ${Math.round(MBs * 100 / 1024) / 100}GiB; ${MBdec}MB
-ntfsresize --size ${MBdec}M --force /dev/sd${letra + j}
+ntfsresize --size ${MBdec}M --force --force /dev/sd${letra + j}
 
 # Usar parted para redimensionar y crear nuevas particiones en MiB
 echo "Redimensionando partición de Windows y creando nuevas particiones..."
@@ -203,7 +203,7 @@ parted --fix --script /dev/sd${letra} \\
                     }
 
                 }
-                scripts[i - 1] += cola + '\necho "Proceso completado con éxito en el disco sd' + letra + '."\n############################';
+                scripts[i - 1] += /*cola + */'\necho "Proceso completado con éxito en el disco sd' + letra + '."\n############################';
                 mensajes += `El tamaño total de las nuevas particiones y la reducida  y las viejas en sd${letra} es al menos: ${tDiscSize} MB\n`;
                 textoScripts += `### El disco sd${letra} debe tener mas de ${tDiscSize}MiB. ###\n` + scripts[i - 1] + '\n\n';
             }
