@@ -165,11 +165,11 @@
                             if (etiqueta === 'SRP') nSRP++;
                             if (etiqueta === 'SRPBACKUP') nSRPBACKUP++;
                             if (value !== "100%" && value !== ""){
-                                scripts[i - 1] += `#    sd"${etiqueta}" tamaño: ${MBs}MiB o ${Math.round(MBs*100/1024)/100}GiB \\\n`; 
-                                scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize - MBs + hastaReducir}MiB ${totalSize + hastaReducir}MiB \\\n`;
+                                scripts[i - 1] += `#    sd${letra + j+': '+etiqueta} tamaño: ${MBs}MiB o ${Math.round(MBs*100/1024)/100}GiB \n`; 
+                                scripts[i - 1] += `parted --fix /dev/sd${letra} mkpart "${etiqueta}" ${fs} ${totalSize - MBs + hastaReducir}MiB ${totalSize + hastaReducir}MiB \n`;
                             }else {
-                                scripts[i - 1] += `#    sd"${etiqueta}" tamaño: el que queda libre \\\n`;
-                                scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize + hastaReducir}MiB 100%\n`;
+                                scripts[i - 1] += `#    sd${letra + j+': '+etiqueta} tamaño: el que queda libre \n`;
+                                scripts[i - 1] += `parted --fix /dev/sd${letra} mkpart "${etiqueta}" ${fs} ${totalSize + hastaReducir}MiB 100%\n`;
                             }
                             if (fs === 'linux-swap') {
                                 cola += `mkswap /dev/sd${letra}${j}`;
@@ -186,7 +186,7 @@
                                     MBdec=Math.floor(MBs*1.024*1.024);//0.953674);
                                     //partRedimensionar++;
                                     scripts[i - 1] += `# WIN_PART=sd${letra + j}
-#NEW_WIN_SIZE="${MBs}MiB"  # ${Math.round(MBs * 100 / 1024) / 100}GB en MiB
+#NEW_WIN_SIZE="${MBs}MiB"  # ${Math.round(MBs * 100 / 1024) / 100}GiB
 
 # Redimensionar la partición de Windows a ${MBs}MiB ${Math.round(MBs * 100 / 1024) / 100}GiB; ${MBdec}MB
 ntfsresize --size ${MBdec}M --force --force /dev/sd${letra + j}
@@ -194,7 +194,6 @@ ntfsresize --size ${MBdec}M --force --force /dev/sd${letra + j}
 # Usar parted para redimensionar y crear nuevas particiones en MiB
 echo "Redimensionando partición de Windows y creando nuevas particiones..."
 parted --fix /dev/sd${letra} resizepart ${j} ${MBs+hastaReducir}MiB  
-parted --fix --script /dev/sd${letra} \\
 `;
                                 };
                                 if (sumamos) hastaReducir += MBs;
