@@ -164,8 +164,13 @@
                             let etiqueta = document.getElementById(`et${letra + j}`).value.trim();
                             if (etiqueta === 'SRP') nSRP++;
                             if (etiqueta === 'SRPBACKUP') nSRPBACKUP++;
-                            if (value !== "100%" && value !== "") scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize - MBs + hastaReducir}MiB ${totalSize + hastaReducir}MiB \\\n`;
-                            else scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize + hastaReducir}MiB 100%\n`;
+                            if (value !== "100%" && value !== ""){
+                                scripts[i - 1] += `#    sd"${etiqueta}" tamaño: ${MBs}MiB o ${Math.round(MBs*100/1024)/100}GiB \\\n`; 
+                                scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize - MBs + hastaReducir}MiB ${totalSize + hastaReducir}MiB \\\n`;
+                            }else {
+                                scripts[i - 1] += `#    sd"${etiqueta}" tamaño: el que queda libre \\\n`;
+                                scripts[i - 1] += `    mkpart "${etiqueta}" ${fs} ${totalSize + hastaReducir}MiB 100%\n`;
+                            }
                             if (fs === 'linux-swap') {
                                 cola += `mkswap /dev/sd${letra}${j}`;
                                 partLinusSwap++;
