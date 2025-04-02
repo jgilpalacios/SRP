@@ -638,7 +638,7 @@ read -p "Introduce el nuevo nombre para el equipo: " nuevo_nombre
 # Cambiar el nombre del host en /etc/hostname
 echo "$nuevo_nombre" > /etc/hostname
 
-# Cambiar el nombre del host en /etc/hosts (asegurarse de que la dirección 127.0.0.1 coincida con el nombre del host)
+# Cambiar el nombre del host en /etc/hosts (asegurarse de que la dirección 127.0.1.1 coincida con el nombre del host)
 sed -i "s/127.0.1.1.*/127.0.1.1   $nuevo_nombre/" /etc/hosts
 
 # Aplicar el cambio de nombre del host
