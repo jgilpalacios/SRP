@@ -679,11 +679,11 @@ systemctl restart smbd
 # Confirmar que el cambio fue exitoso
 echo "El grupo de trabajo ha sido cambiado a '$nuevo_grupo_trabajo'."`;
                 folder4.file('cambiar_grupo_trabajo.sh', herramienta);
-                let herraux=('"/dev/'+pSRP.disco + pSRP.particion+'" "/dev/'+pSRPBACKUP.disco + pSRPBACKUP.particion+'"');
+                let herraux=('"/dev/sd'+pSRP.disco + pSRP.particion+'" "/dev/sd'+pSRPBACKUP.disco + pSRPBACKUP.particion+'"');
                 if (pWin.activa) {
-                    herraux+=(' "/dev/'+pWin.disco + pWin.particion+'"');
-                    if (pResW.activa) herraux+=(' "/dev/'+pResW.disco + pResW.particion+'"');
-                    if (pResW2.activa) herraux+=(' "/dev/'+pResW2.disco + pResW2.particion+'"');
+                    herraux+=(' "/dev/sd'+pWin.disco + pWin.particion+'"');
+                    if (pResW.activa) herraux+=(' "/dev/sd'+pResW.disco + pResW.particion+'"');
+                    if (pResW2.activa) herraux+=(' "/dev/sd'+pResW2.disco + pResW2.particion+'"');
                 }
                
                 herramienta = `#!/bin/bash
@@ -720,7 +720,8 @@ for particion in "`+'${particiones[@]}'+`"; do
         echo "✔ La partición $particion (UUID=$UUID) ya está en /etc/fstab. No se modificará."
     else
         echo "➕ Agregando $particion (UUID=$UUID) a /etc/fstab para evitar montaje automático..."
-        echo "UUID=$UUID /mnt/none $FSTYPE defaults,nofail 0 0" >> /etc/fstab
+        echo "#La partición $particion se incluye para no ser montada en el arranque." >> /etc/fstab
+        echo "UUID=$UUID none $FSTYPE noauto 0 0" >> /etc/fstab
     fi
 
     # Desmontar si ya está montada
