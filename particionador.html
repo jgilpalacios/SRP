@@ -193,7 +193,8 @@ ntfsresize --size ${MBdec}M --force --force /dev/sd${letra + j}
 
 # Usar parted para redimensionar y crear nuevas particiones en MiB
 echo "Redimensionando partición de Windows y creando nuevas particiones..."
-parted --fix /dev/sd${letra} resizepart ${j} ${MBs+hastaReducir}MiB  
+parted --fix /dev/sd${letra} resizepart ${j} ${MBs+hastaReducir}MiB
+ntfsfix /dev/sd${letra}${j}
 `;
                                 };
                                 if (sumamos) hastaReducir += MBs;
