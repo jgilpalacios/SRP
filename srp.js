@@ -45,7 +45,7 @@ let menus = [
     },
     {
       "nombre": "menurestwinmax2.cfg",
-      "contenido": "background_image /srp/fondos/fondorest.png\n\nmenuentry \"<== Volver al menu anterior(Maqueta personalizada)\" --unrestricted {\nconfigfile /srp/menus/menucopia2.cfg\n}\n\nmenuentry \"Iniciar restauración de Windows\" --unrestricted {\nset gfxpayload=keep\nset root=$pSRP\nlinux /sysresccd/boot/x86_64/vmlinuz archisobasedir=sysresccd archisolabel=SRP iomem=relaxed setkmap=es quiet ar_suffixes=1,4,5 nowait srp_copia=copia2\ninitrd /sysresccd/boot/intel_ucode.img /sysresccd/boot/amd_ucode.img /sysresccd/boot/x86_64/sysresccd.img\n}\n"
+      "contenido": "background_image /srp/fondos/fondorest.png\n\nmenuentry \"<== Volver al menu anterior(Maqueta personalizada)\" --unrestricted {\nconfigfile /srp/menus/menucopia2.cfg\n}\n\nmenuentry \"Iniciar restauración de Windows y MAX\" --unrestricted {\nset gfxpayload=keep\nset root=$pSRP\nlinux /sysresccd/boot/x86_64/vmlinuz archisobasedir=sysresccd archisolabel=SRP iomem=relaxed setkmap=es quiet ar_suffixes=1,4,5 nowait srp_copia=copia2\ninitrd /sysresccd/boot/intel_ucode.img /sysresccd/boot/amd_ucode.img /sysresccd/boot/x86_64/sysresccd.img\n}\n"
     },
     {
       "nombre": "menucopia1.cfg",
