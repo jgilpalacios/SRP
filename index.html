@@ -52,17 +52,37 @@
             <option value="3">3</option>
             <option value="4">4</option>
         </select>
+        <!-- Botón visible que abre el input oculto -->
+        <button id="selectBtn">Cargar configuración.txt</button>
+
+        <!-- input de archivo oculto (acepta .txt). No forzará nombre, por eso verificamos en JS -->
+        <input id="fileInput" type="file" accept=".txt,text/plain" style="display:none" />
+
+        <!-- Selecciona archivo particiones.txt -->
+        <label><input type="checkbox" id="chkUUID"
+                title="Si se selecciona se deben cargar las UUIDs de las particiones de cada equipo a instalar el SRP" />
+            Usar UUID</label>
+        <span id="uuidSection" style="display:none;">
+            Ejecuta en una terminal la orden: <b>blkid -s UUID>particiones.txt</b>
+            <button id="selectPartBtn">Buscar particiones.txt</button>
+            <input id="partFileInput" type="file" accept=".txt,text/plain" style="display:none" /></span>
     </p>
 
     <div class="tabs" id="tabs"></div>
     <div id="menu" class="menu"></div>
     <button onclick="comprobarErrores()">Comprobación</button><button onclick="generarZip()">Descargar SRP.ZIP</button>
-    <h4>Info: <a href="https://www.educa2.madrid.org/web/jgilpalacios/srp" target="_blank">https://www.educa2.madrid.org/web/jgilpalacios/</a></h4>
+    <h4>Info: <a href="https://www.educa2.madrid.org/web/jgilpalacios/srp"
+            target="_blank">https://www.educa2.madrid.org/web/jgilpalacios/</a></h4>
     <p id="error"></p>
     <!--Parseador-->
+    <p>Estado: <span id="status">No hay archivo seleccionado</span></p>
+    <p>Nombre del archivo: <strong id="fileName">—</strong></p>
 
+    <h3>Contenido (si se pudo leer)</h3>
+    <pre id="fileContent">—</pre>
 
     <script>
+        let seHaCargadoUUIDsFile = false;
         let configuracion = {
             users: [{ nombre: 'madrid', pass: 'cmadrid', enc: false }, { nombre: 'consejeria', pass: 'cconsejeria', enc: true }],
             nDiscos: 1,
@@ -73,6 +93,161 @@
                 { nombre: 'MAX', particionMAX: { disco: 'a', particion: 5, activa: true }, particionSWAP: { disco: 'a', particion: 6, activa: true } }
             ]
         };
+        //////////
+        let configuraciónContenido = null; // contiene el texto del archivo (string)
+
+        const selectBtn = document.getElementById('selectBtn');
+        const fileInput = document.getElementById('fileInput');
+        const statusEl = document.getElementById('status');
+        const fileNameEl = document.getElementById('fileName');
+        const fileContentEl = document.getElementById('fileContent');
+
+        // Abrir diálogo de archivos al pulsar el botón
+        selectBtn.addEventListener('click', () => fileInput.click());
+
+        // Manejar la selección de archivo
+        fileInput.addEventListener('change', async (event) => {
+            const file = fileInput.files[0];
+            if (!file) return; // usuario canceló
+
+            // Comprobamos el nombre exacto solicitado
+            // Nota: aquí se comprueba exactamente 'configuración.txt' (con tilde).
+            // Si quieres aceptar también 'configuracion.txt' sin tilde, añade esa condición.
+            const expectedName = 'configuración.txt';
+            if (file.name !== expectedName) {
+                statusEl.textContent = 'Archivo incorrecto';
+                statusEl.className = 'err';
+                fileNameEl.textContent = file.name;
+                fileContentEl.textContent = 'El archivo seleccionado no se llama "' + expectedName + '".';
+                // Limpiamos la selección para permitir volver a elegir el mismo archivo si se desea
+                fileInput.value = '';
+                configuración = null;
+                configuraciónContenido = null;
+                return;
+            }
+
+            // Si llegamos aquí, el nombre coincide -> asignamos a la variable 'configuración'
+            configuración = file; // objeto File de la API File
+            statusEl.textContent = 'Archivo válido seleccionado';
+            statusEl.className = 'ok';
+            fileNameEl.textContent = file.name;
+
+            try {
+                // Leer contenido como texto (File.text() devuelve una Promise)
+                configuraciónContenido = await file.text();
+                fileContentEl.textContent = configuraciónContenido;
+                procesarConfiguración(configuraciónContenido)
+            } catch (err) {
+                fileContentEl.textContent = 'Error leyendo el archivo: ' + err;
+            }
+
+            // Aquí puedes usar la variable 'configuración' y 'configuraciónContenido' en tu código
+            // por ejemplo: procesarConfiguración(configuraciónContenido);
+        });
+
+        // Ejemplo de función que podría usar la configuración ya leída
+        function procesarConfiguración(texto) {
+            // parsear, dividir por líneas, JSON.parse, etc. según formato de tu archivo
+            configuracion = JSON.parse(texto);
+            cargarTabs();
+            console.log('Procesando configuración:', texto);
+        }
+        ////Asignamos las UUID de las particiones desde el archivo particiones.txt
+        const selectPartBtn = document.getElementById('selectPartBtn');
+        const partFileInput = document.getElementById('partFileInput');
+
+        let particionesContenido = null;
+
+        // Mostrar/ocultar botón según checkbox
+        const chkUUID = document.getElementById('chkUUID');
+        chkUUID.addEventListener('change', () => {
+            configuracion.usarUUID = chkUUID.checked;
+            selectPartBtn.style.display = chkUUID.checked ? 'inline-block' : 'none';
+            document.getElementById('uuidSection').style.display = chkUUID.checked ? 'inline' : 'none';
+        });
+
+        selectPartBtn.addEventListener('click', () => partFileInput.click());
+
+        partFileInput.addEventListener('change', async () => {
+            const file = partFileInput.files[0];
+            if (!file) return;
+
+            if (file.name !== 'particiones.txt') {
+                alert('El archivo debe llamarse particiones.txt');
+                partFileInput.value = '';
+                return;
+            }
+
+            particionesContenido = await file.text();
+
+            asignarUUIDs();
+        });
+
+        function asignarUUIDs() {
+            /*if (!configuraciónContenido) {
+              alert('Primero carga configuración.txt');
+              return;
+            }*/
+            if (!particionesContenido) {
+                alert('Primero carga particiones.txt');
+                return;
+            }
+
+            let conf;
+            try {
+                //conf = JSON.parse(configuraciónContenido);
+                conf = configuracion;
+            } catch (e) {
+                alert('Error al parsear configuración: ' + e);
+                return;
+            }
+
+            const lineas = particionesContenido.split("\n").filter(l => l.trim() !== "");
+            const mapaUUID = {};
+            const arrUUID = [];
+            for (const l of lineas) {
+                const partes = l.split(':');
+                if (partes.length >= 2) {
+                    const dev = partes[0].trim();
+                    const uuid = partes[1].trim();
+                    mapaUUID[dev] = uuid;
+                    arrUUID.push(uuid);
+                }
+            }
+            let error = false
+            arrUUID.forEach((uuid, index) => {
+                for (let j = 0; j < index; j++) {
+                    if (arrUUID[j] === uuid) {
+                        alert('Atención: La UUID ' + uuid + ' está duplicada en el archivo particiones.txt');
+                        error = true;
+                        return;
+                    }
+                }
+            });
+            if (error) return;
+
+            for (const part of conf.particiones) {
+                for (const key of Object.keys(part)) {
+                    if (key.startsWith('particion')) {
+                        const p = part[key];
+                        p.UUID = null; // resetear antes
+                        if (p.activa) {
+                            const nombreDev = `/dev/sd${p.disco}${p.particion}`;
+                            if(mapaUUID[nombreDev]){
+                                p.UUID = mapaUUID[nombreDev].split('"')[1];
+                            }else{
+                                p.UUID = null;
+                            }
+                        }
+                    }
+                }
+            }
+            cargarTabs();
+            seHaCargadoUUIDsFile = true;
+            console.log('Configuración actualizada:', conf);
+
+        }
+        /////////
 
         function actualizarDiscos() {
             let numDiscos = document.getElementById("numDiscos").value;
@@ -85,6 +260,16 @@
             const tabs = document.getElementById("tabs");
             tabs.innerHTML = "";
             let srp_index = 1;
+
+            if(configuracion.usarUUID){
+                document.getElementById('chkUUID').checked = true;
+                document.getElementById('uuidSection').style.display = 'inline';
+                selectPartBtn.style.display = 'inline-block';
+            }else{
+                document.getElementById('chkUUID').checked = false;
+                document.getElementById('uuidSection').style.display = 'none';
+                selectPartBtn.style.display = 'none';
+            }
 
             configuracion.particiones.forEach((particion, index) => {
                 let tab = document.createElement("div");
@@ -166,7 +351,7 @@
                         let option = document.createElement("option");
                         option.value = i;
                         option.innerText = i;
-                        if (particion[clave].particion == i) option.selected = true;
+                        if (particion[clave].particion === i) option.selected = true;
                         select.appendChild(option);
                     }
 
@@ -204,6 +389,10 @@
                     div.appendChild(discoSelect);
                     div.appendChild(select);
                     if (/*clave !== 'particionEFI' &&*/ clave !== 'particionSRPBACKUP' && clave !== 'particionSRP') div.appendChild(checkbox);
+                    let label2 = document.createElement("label");
+                    label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
+                    div.appendChild(label2);
+
                     if (clave === 'particionSRPBACKUP') {
                         let label = document.createElement("label");
                         label.innerText = 'user: madrid => clave: ';
@@ -234,10 +423,15 @@
         }
 
         function comprobarErrores() {
+            if(configuracion.usarUUID && !seHaCargadoUUIDsFile){
+                let seguir=confirm('Si se va a usar UUIDs y no se ha cargado desde el archivo particiones.txt');
+                if(!seguir) return false;
+            }
             //se pone activa srp para tener en document las partes de las contraseña
             mostrarMenu(1, srp_tab)
             let errorMsg = "";
             let activas = new Set();
+            let UUIDs = new Set();
             configuracion.particiones.forEach(particion => {
                 Object.keys(particion).forEach(clave => {
                     if (clave !== "nombre") {
@@ -247,6 +441,16 @@
                                 errorMsg += `Conflicto: La partición sd${id} está duplicada.\n`;
                             }
                             activas.add(id);
+                            if (configuracion.usarUUID) {
+                                if (!particion[clave].UUID) {
+                                    errorMsg += `Error: La partición sd${id} no tiene UUID asignada.\n`;
+                                }else{
+                                    if (UUIDs.has(particion[clave].UUID)) {
+                                        errorMsg += `Conflicto: La UUID ${particion[clave].UUID} está duplicada.\n`;
+                                    }
+                                    UUIDs.add(particion[clave].UUID);
+                                }
+                            }
                         }
                     }
                 });
@@ -497,12 +701,29 @@ chainloader +1
 set root=(hd${numDisco(pMAX.disco)},${pMAX.particion})
 chainloader +1
 }`;
-                    //alert('win: '+legacyWIN+'\nMAX: '+legacyMAX);
 
+let UEFI_WIN = `menuentry "Iniciar Windows" --unrestricted --class windows --class os {
+insmod part_gpt
+insmod fat
+set root=$pEFI
+search --no-floppy --fs-uuid --set=root ${pEFI.UUID}
+chainloader /EFI/Microsoft/Boot/bootmgfw.efi
+}`;
+let UEFI_MAX = `menuentry "Iniciar MAX" --unrestricted --class max --class gnu-linux --class gnu --class os {
+insmod part_gpt
+insmod fat
+set root=$pEFI
+search --no-floppy --fs-uuid --set=root ${pEFI.UUID}
+chainloader /EFI/ubuntu/grubx64.efi
+}`;    
+                
                     texto = reemplazarTexto(texto, 'variables globales grub', aux)
                     if (!pEFI.activa) {
                         texto = reemplazarTexto(texto, 'entrada windows', legacyWIN)
                         texto = reemplazarTexto(texto, 'entrada MAX', legacyMAX)
+                    }else if (configuracion.usarUUID) {
+                        texto = reemplazarTexto(texto, 'entrada windows', UEFI_WIN)
+                        texto = reemplazarTexto(texto, 'entrada MAX', UEFI_MAX)
                     }
                     if (!pWin.activa) texto = reemplazarTexto(texto, 'entrada windows', '')
                     if (!pMAX.activa) texto = reemplazarTexto(texto, 'entrada MAX', '')
@@ -531,6 +752,21 @@ chainloader +1
                         texto = reemplazarTexto(texto, 'entrada EFI', '');
                         texto = reemplazarTexto(texto, 'entrada EFI2', '');
                     }
+                }
+                if(pEFI.activa&&configuracion.usarUUID){
+                    if(texto.indexOf('set root=$pSRP'>-1)){ 
+                        let fragmentos=texto.split('set root=$pSRP')
+                        let nuevoTexto='';
+                        let n=fragmentos.length-1;
+                        fragmentos.forEach((fragmento,indice)=>{
+                            if(indice<n){
+                                nuevoTexto+=fragmento+'set root=$pSRP\n'+`search --no-floppy --fs-uuid --set=root ${pSRP.UUID}`;;
+                            }else{
+                                nuevoTexto+=fragmento;
+                            }
+                        });
+                        texto=nuevoTexto;
+                    };
                 }
                 if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menuprincipal.cfg'].includes(archivo.nombre)) {
                     folder2.file(archivo.nombre, texto);
@@ -679,17 +915,17 @@ systemctl restart smbd
 # Confirmar que el cambio fue exitoso
 echo "El grupo de trabajo ha sido cambiado a '$nuevo_grupo_trabajo'."`;
                 folder4.file('cambiar_grupo_trabajo.sh', herramienta);
-                let herraux=('"/dev/sd'+pSRP.disco + pSRP.particion+'" "/dev/sd'+pSRPBACKUP.disco + pSRPBACKUP.particion+'"');
+                let herraux = ('"/dev/sd' + pSRP.disco + pSRP.particion + '" "/dev/sd' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"');
                 if (pWin.activa) {
-                    herraux+=(' "/dev/sd'+pWin.disco + pWin.particion+'"');
-                    if (pResW.activa) herraux+=(' "/dev/sd'+pResW.disco + pResW.particion+'"');
-                    if (pResW2.activa) herraux+=(' "/dev/sd'+pResW2.disco + pResW2.particion+'"');
+                    herraux += (' "/dev/sd' + pWin.disco + pWin.particion + '"');
+                    if (pResW.activa) herraux += (' "/dev/sd' + pResW.disco + pResW.particion + '"');
+                    if (pResW2.activa) herraux += (' "/dev/sd' + pResW2.disco + pResW2.particion + '"');
                 }
-               
+
                 herramienta = `#!/bin/bash
-## Tras la instalación de MAX, se montan automáticamente las particiones que usamos para administrar SRP${pWin.activa?` y
-## las propias de windows, `:',\n## '}como son particiones que los usuarios normales no es conveniente que pueda ni siquiera ver
-## ya que si se hicieran cambios no autorizados podrían dañar el funcionamiento ${pWin.activa?'de windows y/o el':'del'} sistema de 
+## Tras la instalación de MAX, se montan automáticamente las particiones que usamos para administrar SRP${pWin.activa ? ` y
+## las propias de windows, `: ',\n## '}como son particiones que los usuarios normales no es conveniente que pueda ni siquiera ver
+## ya que si se hicieran cambios no autorizados podrían dañar el funcionamiento ${pWin.activa ? 'de windows y/o el' : 'del'} sistema de 
 ## restauración, con este script se pretende que queden sin montar y por tanto ocultas a los usuarios de MAX.
 ## Si el administrador del equipo precisara acceder a ellas conociendo sus discos y particiones de la configuración
 ## del disco/discos que se creo en el momento de elaborar el SRP (tambien se pueden ver usando gparted), puede proceder 
@@ -704,7 +940,7 @@ fi
 # Lista de particiones a ocultar
 particiones=(${herraux})
 # Procesar cada partición
-for particion in "`+'${particiones[@]}'+`"; do
+for particion in "`+ '${particiones[@]}' + `"; do
     # Obtener UUID y sistema de archivos
     UUID=$(blkid -s UUID -o value "$particion" 2>/dev/null)
     FSTYPE=$(blkid -s TYPE -o value "$particion" 2>/dev/null)
@@ -733,7 +969,7 @@ for particion in "`+'${particiones[@]}'+`"; do
     fi
 done
 
-echo "✅ Configuración completada. Las particiones de SRP ${pWin.activa?'y  Windows ':''}ya no se montarán automáticamente."
+echo "✅ Configuración completada. Las particiones de SRP ${pWin.activa ? 'y  Windows ' : ''}ya no se montarán automáticamente."
 `;
                 folder4.file('ocultar_particiones_SRP' + (pWin.activa ? '_windows' : '') + '.sh', herramienta);
             }
