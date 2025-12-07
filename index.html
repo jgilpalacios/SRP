@@ -233,9 +233,9 @@
                         p.UUID = null; // resetear antes
                         if (p.activa) {
                             const nombreDev = `/dev/sd${p.disco}${p.particion}`;
-                            if(mapaUUID[nombreDev]){
+                            if (mapaUUID[nombreDev]) {
                                 p.UUID = mapaUUID[nombreDev].split('"')[1];
-                            }else{
+                            } else {
                                 p.UUID = null;
                             }
                         }
@@ -261,11 +261,11 @@
             tabs.innerHTML = "";
             let srp_index = 1;
 
-            if(configuracion.usarUUID){
+            if (configuracion.usarUUID) {
                 document.getElementById('chkUUID').checked = true;
                 document.getElementById('uuidSection').style.display = 'inline';
                 selectPartBtn.style.display = 'inline-block';
-            }else{
+            } else {
                 document.getElementById('chkUUID').checked = false;
                 document.getElementById('uuidSection').style.display = 'none';
                 selectPartBtn.style.display = 'none';
@@ -423,9 +423,9 @@
         }
 
         function comprobarErrores() {
-            if(configuracion.usarUUID && !seHaCargadoUUIDsFile){
-                let seguir=confirm('Si se va a usar UUIDs y no se ha cargado desde el archivo particiones.txt');
-                if(!seguir) return false;
+            if (configuracion.usarUUID && !seHaCargadoUUIDsFile) {
+                let seguir = confirm('Si se va a usar UUIDs y no se ha cargado desde el archivo particiones.txt');
+                if (!seguir) return false;
             }
             //se pone activa srp para tener en document las partes de las contraseña
             mostrarMenu(1, srp_tab)
@@ -444,7 +444,7 @@
                             if (configuracion.usarUUID) {
                                 if (!particion[clave].UUID) {
                                     errorMsg += `Error: La partición sd${id} no tiene UUID asignada.\n`;
-                                }else{
+                                } else {
                                     if (UUIDs.has(particion[clave].UUID)) {
                                         errorMsg += `Conflicto: La UUID ${particion[clave].UUID} está duplicada.\n`;
                                     }
@@ -697,31 +697,57 @@ password madrid ${configuracion.users[0].pass}
 set root=(hd${numDisco(pResW.disco)},${pResW.particion})
 chainloader +1
 }`;
+
                     let legacyMAX = `menuentry "Iniciar MAX" --unrestricted {
 set root=(hd${numDisco(pMAX.disco)},${pMAX.particion})
 chainloader +1
 }`;
-
-let UEFI_WIN = `menuentry "Iniciar Windows" --unrestricted --class windows --class os {
+                    //si esta activa usar UUID las cambiamos por:
+                    if (configuracion.usarUUID) {
+                        legacyWIN = `menuentry "Iniciar Windows" --unrestricted {
+set root=(hd${numDisco(pResW.disco)},${pResW.particion})
+if [ x$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=root --hint-bios=hd${numDisco(pResW.disco)},gpt${pResW.particion} --hint-efi=hd${numDisco(pResW.disco)},gpt${pResW.particion} --hint-baremetal=ahci${numDisco(pResW.disco)},gpt${pResW.particion}  ${pResW.UUID}
+else
+  search --no-floppy --fs-uuid --set=root ${pResW.UUID}
+fi
+chainloader +1
+}`;
+                        legacyMAX = `menuentry "Iniciar MAX" --unrestricted {
+set root=(hd${numDisco(pMAX.disco)},${pMAX.particion})
+if [ x$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=root --hint-bios=hd${numDisco(pMAX.disco)},gpt${pMAX.particion} --hint-efi=hd${numDisco(pMAX.disco)},gpt${pMAX.particion} --hint-baremetal=ahci${numDisco(pMAX.disco)},gpt${pMAX.particion}  ${pMAX.UUID}
+else
+  search --no-floppy --fs-uuid --set=root ${pMAX.UUID}
+fi
+chainloader +1
+}`;
+                    }
+                    let auxEFI = `if [ x$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=root --hint-bios=hd${numDisco(pEFI.disco)},gpt${pEFI.particion} --hint-efi=hd${numDisco(pEFI.disco)},gpt${pEFI.particion} --hint-baremetal=ahci${numDisco(pEFI.disco)},gpt${pEFI.particion}  ${pEFI.UUID}
+else
+  search --no-floppy --fs-uuid --set=root ${pEFI.UUID}
+fi`;
+                    let UEFI_WIN = `menuentry "Iniciar Windows" --unrestricted --class windows --class os {
 insmod part_gpt
 insmod fat
 set root=$pEFI
-search --no-floppy --fs-uuid --set=root ${pEFI.UUID}
+${auxEFI}
 chainloader /EFI/Microsoft/Boot/bootmgfw.efi
 }`;
-let UEFI_MAX = `menuentry "Iniciar MAX" --unrestricted --class max --class gnu-linux --class gnu --class os {
+                    let UEFI_MAX = `menuentry "Iniciar MAX" --unrestricted --class max --class gnu-linux --class gnu --class os {
 insmod part_gpt
 insmod fat
 set root=$pEFI
-search --no-floppy --fs-uuid --set=root ${pEFI.UUID}
+${auxEFI}
 chainloader /EFI/ubuntu/grubx64.efi
-}`;    
-                
+}`;
+
                     texto = reemplazarTexto(texto, 'variables globales grub', aux)
                     if (!pEFI.activa) {
                         texto = reemplazarTexto(texto, 'entrada windows', legacyWIN)
                         texto = reemplazarTexto(texto, 'entrada MAX', legacyMAX)
-                    }else if (configuracion.usarUUID) {
+                    } else if (configuracion.usarUUID) {
                         texto = reemplazarTexto(texto, 'entrada windows', UEFI_WIN)
                         texto = reemplazarTexto(texto, 'entrada MAX', UEFI_MAX)
                     }
@@ -753,19 +779,24 @@ chainloader /EFI/ubuntu/grubx64.efi
                         texto = reemplazarTexto(texto, 'entrada EFI2', '');
                     }
                 }
-                if(pEFI.activa&&configuracion.usarUUID){
-                    if(texto.indexOf('set root=$pSRP'>-1)){ 
-                        let fragmentos=texto.split('set root=$pSRP')
-                        let nuevoTexto='';
-                        let n=fragmentos.length-1;
-                        fragmentos.forEach((fragmento,indice)=>{
-                            if(indice<n){
-                                nuevoTexto+=fragmento+'set root=$pSRP\n'+`search --no-floppy --fs-uuid --set=root ${pSRP.UUID}`;;
-                            }else{
-                                nuevoTexto+=fragmento;
+                if ( configuracion.usarUUID) {
+                    if (texto.indexOf('set root=$pSRP' > -1)) { 
+                        let fragmentos = texto.split('set root=$pSRP')
+                        let nuevoTexto = '';
+                        let n = fragmentos.length - 1;
+                        fragmentos.forEach((fragmento, indice) => {
+                            if (indice < n) {
+                                nuevoTexto += fragmento + `set root=$pSRP
+if [ x$feature_platform_search_hint = xy ]; then
+  search --no-floppy --fs-uuid --set=root --hint-bios=hd${numDisco(pSRP.disco)},gpt${pSRP.particion} --hint-efi=hd${numDisco(pSRP.disco)},gpt${pSRP.particion} --hint-baremetal=ahci${numDisco(pSRP.disco)},gpt${pSRP.particion}  ${pSRP.UUID}
+else
+  search --no-floppy --fs-uuid --set=root ${pSRP.UUID}
+fi`;
+                            } else {
+                                nuevoTexto += fragmento;
                             }
                         });
-                        texto=nuevoTexto;
+                        texto = nuevoTexto;
                     };
                 }
                 if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menuprincipal.cfg'].includes(archivo.nombre)) {
