@@ -61,6 +61,6 @@ let menus = [
     },
     {
       "nombre": "menurestwinmax1.cfg",
-      "contenido": "background_image /srp/fondos/fondorest.png\n\nmenuentry \"<== Volver al menu anterior(Maqueta de fábrica)\" {\nconfigfile /srp/menus/menucopia1.cfg\n}\n\nmenuentry \"Iniciar restauración de Windows y MAX\" {\nlinux     /isolinux/rescue32 nomdadm docache setkmap=es quiet autoruns=1,4,5 nowait srp_copia=copia1\ninitrd    /isolinux/initram.igz\n}\n"
+      "contenido": "background_image /srp/fondos/fondorest.png\n\nmenuentry \"<== Volver al menu anterior(Maqueta de fábrica)\" {\nconfigfile /srp/menus/menucopia1.cfg\n}\n\nmenuentry \"Iniciar restauración de Windows y MAX\" {\nset gfxpayload=keep\nset root=$pSRP\nlinux /sysresccd/boot/x86_64/vmlinuz archisobasedir=sysresccd archisolabel=SRP iomem=relaxed setkmap=es quiet ar_suffixes=1,4,5 nowait srp_copia=copia1\ninitrd /sysresccd/boot/intel_ucode.img /sysresccd/boot/amd_ucode.img /sysresccd/boot/x86_64/sysresccd.img\n}\n"
     }
   ];
