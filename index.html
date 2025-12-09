@@ -427,6 +427,9 @@
                     discoSelect.onchange = () => {
                         particion[clave].disco = discoSelect.value;
                         document.getElementById("error").innerText = '';
+                        //if(configuracion.usarUUID) alert('Si ha cambiado el disco y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
+                        particion[clave].UUID=null; 
+                        label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                         //actualizarDiscos();
                     };
 
@@ -437,6 +440,9 @@
                     select.onchange = () => {
                         particion[clave].particion = parseInt(select.value);
                         document.getElementById("error").innerText = '';
+                        //if(configuracion.usarUUID) alert('Si ha cambiado la partición y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
+                        particion[clave].UUID=null; 
+                        label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                     }
                     checkbox.onchange = () => {
                         particion[clave].activa = checkbox.checked;
@@ -481,6 +487,7 @@
         }
 
         function comprobarErrores() {
+            let recuerdaCargarUUIDs='';
             document.getElementById("cargarConfResultado").style.visibility = 'hidden';
             if (configuracion.usarUUID && !seHaCargadoUUIDsFile) {
                 let seguir = confirm('Si se va a usar UUIDs y no se ha cargado desde el archivo particiones.txt');
@@ -502,6 +509,7 @@
                             activas.add(id);
                             if (configuracion.usarUUID) {
                                 if (!particion[clave].UUID) {
+                                    recuerdaCargarUUIDs='\nRecuerda cargar las UUIDs desde el archivo particiones.txt si has cambiado alguna partición o disco.\n';
                                     errorMsg += `Error: La partición sd${id} no tiene UUID asignada.\n`;
                                 } else {
                                     if (UUIDs.has(particion[clave].UUID)) {
@@ -530,6 +538,7 @@
             }
             //alert(!pEFI.activa&&pWin.activa&&!pResW.activa+'****')
             //alert(errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion));
+            errorMsg = recuerdaCargarUUIDs+errorMsg;
             document.getElementById("error").innerText = errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion);
             return errorMsg === '';
         }
