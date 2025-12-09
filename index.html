@@ -481,6 +481,7 @@
         }
 
         function comprobarErrores() {
+            document.getElementById("cargarConfResultado").style.visibility = 'hidden';
             if (configuracion.usarUUID && !seHaCargadoUUIDsFile) {
                 let seguir = confirm('Si se va a usar UUIDs y no se ha cargado desde el archivo particiones.txt');
                 if (!seguir) return false;
