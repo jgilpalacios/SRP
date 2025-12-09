@@ -36,6 +36,38 @@
         .visible {
             display: block;
         }
+
+        /*carga de configuracion */
+        .card {
+            border: 1px solid #e5e7eb;
+            padding: 1rem 1.25rem;
+            border-radius: 8px;
+            max-width: 720px;
+        }
+
+        button {
+            /*padding: .5rem .75rem;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            background: white;*/
+            cursor: pointer;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            background: #f8fafc;
+            padding: .75rem;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        .ok {
+            color: #065f46;
+        }
+
+        .err {
+            color: #b91c1c;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -75,12 +107,13 @@
             target="_blank">https://www.educa2.madrid.org/web/jgilpalacios/</a></h4>
     <p id="error"></p>
     <!--Parseador-->
-    <p>Estado: <span id="status">No hay archivo seleccionado</span></p>
-    <p>Nombre del archivo: <strong id="fileName">—</strong></p>
+    <span id="cargarConfResultado" style="visibility: hidden;">
+        <p>Estado: <span id="status">No hay archivo seleccionado</span></p>
+        <p>Nombre del archivo: <strong id="fileName">—</strong></p>
 
-    <h3>Contenido (si se pudo leer)</h3>
-    <pre id="fileContent">—</pre>
-
+        <h3>Contenido (si se pudo leer)</h3>
+        <pre id="fileContent">—</pre>
+    </span>
     <script>
         let seHaCargadoUUIDsFile = false;
         let configuracion = {
@@ -107,6 +140,7 @@
 
         // Manejar la selección de archivo
         fileInput.addEventListener('change', async (event) => {
+            document.getElementById('cargarConfResultado').style.visibility = 'visible';
             const file = fileInput.files[0];
             if (!file) return; // usuario canceló
 
@@ -115,7 +149,8 @@
             // Si quieres aceptar también 'configuracion.txt' sin tilde, añade esa condición.
             const expectedName = 'configuración.txt';
             if (file.name !== expectedName) {
-                statusEl.textContent = 'Archivo incorrecto';
+                alert('El archivo debe llamarse ' + expectedName);
+                statusEl.textContent = 'Archivo incorrecto: se esperaba "' + expectedName + '" no "' + file.name + '".';
                 statusEl.className = 'err';
                 fileNameEl.textContent = file.name;
                 fileContentEl.textContent = 'El archivo seleccionado no se llama "' + expectedName + '".';
@@ -140,13 +175,13 @@
             } catch (err) {
                 fileContentEl.textContent = 'Error leyendo el archivo: ' + err;
             }
-
             // Aquí puedes usar la variable 'configuración' y 'configuraciónContenido' en tu código
             // por ejemplo: procesarConfiguración(configuraciónContenido);
         });
 
         // Ejemplo de función que podría usar la configuración ya leída
         function procesarConfiguración(texto) {
+
             // parsear, dividir por líneas, JSON.parse, etc. según formato de tu archivo
             configuracion = JSON.parse(texto);
             cargarTabs();
@@ -171,16 +206,39 @@
         partFileInput.addEventListener('change', async () => {
             const file = partFileInput.files[0];
             if (!file) return;
-
-            if (file.name !== 'particiones.txt') {
-                alert('El archivo debe llamarse particiones.txt');
+            document.getElementById('cargarConfResultado').style.visibility = 'visible';
+            // Comprobamos el nombre exacto solicitado
+            const expectedName = 'particiones.txt';
+            if (file.name !== expectedName) {
+                alert('El archivo debe llamarse ' + expectedName);
+                statusEl.textContent = 'Archivo incorrecto: se esperaba "' + expectedName + '" no "' + file.name + '".';
+                statusEl.className = 'err';
+                fileNameEl.textContent = file.name;
+                fileContentEl.textContent = 'El archivo seleccionado no se llama "' + expectedName + '".';
+                // Limpiamos la selección para permitir volver a elegir el mismo archivo si se desea
+                //fileInput.value = '';
                 partFileInput.value = '';
+
+
+                
                 return;
             }
+            statusEl.textContent = 'Archivo válido seleccionado';
+            statusEl.className = 'ok';
+            fileNameEl.textContent = file.name;
 
-            particionesContenido = await file.text();
+            try {
+                // Leer contenido como texto (File.text() devuelve una Promise)
+                particionesContenido = await file.text();
+                fileContentEl.textContent = particionesContenido;
+                asignarUUIDs();
+            } catch (err) {
+                fileContentEl.textContent = 'Error leyendo el archivo: ' + err;
+            }
 
-            asignarUUIDs();
+            //particionesContenido = await file.text();
+
+            //asignarUUIDs();
         });
 
         function asignarUUIDs() {
@@ -779,8 +837,8 @@ chainloader /EFI/ubuntu/grubx64.efi
                         texto = reemplazarTexto(texto, 'entrada EFI2', '');
                     }
                 }
-                if ( configuracion.usarUUID) {
-                    if (texto.indexOf('set root=$pSRP' > -1)) { 
+                if (configuracion.usarUUID) {
+                    if (texto.indexOf('set root=$pSRP' > -1)) {
                         let fragmentos = texto.split('set root=$pSRP')
                         let nuevoTexto = '';
                         let n = fragmentos.length - 1;
