@@ -220,7 +220,7 @@
                 partFileInput.value = '';
 
 
-                
+
                 return;
             }
             statusEl.textContent = 'Archivo válido seleccionado';
@@ -428,7 +428,7 @@
                         particion[clave].disco = discoSelect.value;
                         document.getElementById("error").innerText = '';
                         //if(configuracion.usarUUID) alert('Si ha cambiado el disco y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
-                        particion[clave].UUID=null; 
+                        particion[clave].UUID = null;
                         label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                         //actualizarDiscos();
                     };
@@ -441,7 +441,7 @@
                         particion[clave].particion = parseInt(select.value);
                         document.getElementById("error").innerText = '';
                         //if(configuracion.usarUUID) alert('Si ha cambiado la partición y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
-                        particion[clave].UUID=null; 
+                        particion[clave].UUID = null;
                         label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                     }
                     checkbox.onchange = () => {
@@ -487,7 +487,7 @@
         }
 
         function comprobarErrores() {
-            let recuerdaCargarUUIDs='';
+            let recuerdaCargarUUIDs = '';
             document.getElementById("cargarConfResultado").style.visibility = 'hidden';
             if (configuracion.usarUUID && !seHaCargadoUUIDsFile) {
                 let seguir = confirm('Si se va a usar UUIDs y no se ha cargado desde el archivo particiones.txt');
@@ -509,7 +509,7 @@
                             activas.add(id);
                             if (configuracion.usarUUID) {
                                 if (!particion[clave].UUID) {
-                                    recuerdaCargarUUIDs='\nRecuerda cargar las UUIDs desde el archivo particiones.txt si has cambiado alguna partición o disco.\n';
+                                    recuerdaCargarUUIDs = '\nRecuerda cargar las UUIDs desde el archivo particiones.txt si has cambiado alguna partición o disco.\n';
                                     errorMsg += `Error: La partición sd${id} no tiene UUID asignada.\n`;
                                 } else {
                                     if (UUIDs.has(particion[clave].UUID)) {
@@ -538,7 +538,7 @@
             }
             //alert(!pEFI.activa&&pWin.activa&&!pResW.activa+'****')
             //alert(errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion));
-            errorMsg = recuerdaCargarUUIDs+errorMsg;
+            errorMsg = recuerdaCargarUUIDs + errorMsg;
             document.getElementById("error").innerText = errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion);
             return errorMsg === '';
         }
@@ -548,7 +548,7 @@
         function cargarImagenes(zip) {
             return new Promise((resolve, reject) => {
                 const folder = zip.folder("srp/fondos");
-                const imageFiles = ["fondo.png", "fondo2.png", "fondo2.png", "fondo3.png", "fondogene.png", "fondorest.png"]; // Nombres de imágenes esperados
+                const imageFiles = ["fondo.png", "fondo2.png", "fondo2.png", "fondo3.png", "fondogene.png", "fondorest.png", "fondoesp.png"]; // Nombres de imágenes esperados
                 let loadedImages = 0;
 
                 imageFiles.forEach(imgName => {
@@ -744,6 +744,7 @@ ${pEFI.activa ? '' : '#'}G4P1_FS="fat32"
             let folder2 = zip.folder("srp/menus");
 
             menus.forEach(archivo => {
+                //alert('procesando ' + archivo.nombre);
                 let texto = archivo.contenido;
                 if (archivo.nombre === 'menuprincipal.cfg') { //alert('siii'
 
@@ -847,6 +848,14 @@ chainloader /EFI/ubuntu/grubx64.efi
                         texto = reemplazarTexto(texto, 'entrada EFI2', '');
                     }
                 }
+                if (archivo.nombre === 'menuespecial.cfg') {
+                    if (!pWin.activa) {
+                        texto = reemplazarTexto(texto, 'entrada windows', '');
+                    }
+                    if (!pMAX.activa) {
+                        texto = reemplazarTexto(texto, 'entrada MAX', '');;
+                    }
+                }
                 if (configuracion.usarUUID) {
                     if (texto.indexOf('set root=$pSRP' > -1)) {
                         let fragmentos = texto.split('set root=$pSRP')
@@ -867,7 +876,7 @@ fi`;
                         texto = nuevoTexto;
                     };
                 }
-                if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menuprincipal.cfg'].includes(archivo.nombre)) {
+                if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menuprincipal.cfg', 'menuespecial.cfg'].includes(archivo.nombre)) {
                     folder2.file(archivo.nombre, texto);
                 } else {
                     if (pWin.activa && ['menugenewin2.cfg', 'menurestwin1.cfg', 'menurestwin2.cfg'].includes(archivo.nombre)) {

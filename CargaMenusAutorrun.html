@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargar Archivos</title>
+</head>
+<body>
+    <h2>Subir archivos de texto</h2>
+    <input type="file" id="fileInput" multiple>
+    <button onclick="descargarJS()">Descargar archivos.js</button>
+    <pre id="output"></pre>
+
+    <script>
+        let archivos = [];
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const files = event.target.files;
+            for (let file of files) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    archivos.push({ nombre: file.name, contenido: e.target.result });
+                    document.getElementById('output').textContent = JSON.stringify(archivos, null, 2);
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function descargarJS() {
+            const blob = new Blob([`const archivos = ${JSON.stringify(archivos, null, 2)};`], { type: 'application/javascript' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'archivos.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
