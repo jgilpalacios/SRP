@@ -1094,7 +1094,7 @@ echo "✅ Configuración completada. Las particiones de SRP ${pWin.activa ? 'y  
 # primera la entrada SRP usando la herramienta PonerPrimeraLaEntradaSRPenEFI.sh.
 
 # Crea en el firmware del equipo la entrada SRP apuntando a la carpeta EFI/SRP/grubx64.efi
-efibootmgr --create --disk /dev/sda --part 1 --label "SRP" --loader '\\EFI\\SRP\\grubx64.efi'`;
+efibootmgr --create --disk /dev/sd${pEFI.letra} --part ${pEFI.particion} --label "SRP" --loader '\\EFI\\SRP\\grubx64.efi'`;
                 folder5.file('CreaEntradaSRPPostClonado.sh', herramienta);
             }
 
