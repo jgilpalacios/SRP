@@ -1081,8 +1081,9 @@ echo "✅ Configuración completada. Las particiones de SRP ${pWin.activa ? 'y  
 `;
                 folder4.file('ocultar_particiones_SRP' + (pWin.activa ? '_windows' : '') + '.sh', herramienta);
             }
+            let folder5 = zip.folder("herramientas/clonado");
             if (pEFI.activa) {
-                let folder5 = zip.folder("herramientas/clonado");
+                //let folder5 = zip.folder("herramientas/clonado");
                 herramienta = `#!/bin/bash
 
 # Si se clona el disco ya configurado con carpetas para los distintos arranques en la 
@@ -1097,6 +1098,198 @@ echo "✅ Configuración completada. Las particiones de SRP ${pWin.activa ? 'y  
 efibootmgr --create --disk /dev/sd${pEFI.disco} --part ${pEFI.particion} --label "SRP" --loader '\\EFI\\SRP\\grubx64.efi'`;
                 folder5.file('CreaEntradaSRPPostClonado.sh', herramienta);
             }
+            herramienta = `#!/bin/bash
+# ---------------------------------------------------------
+# Servidor/Cliente NFS para intercambiar información entre
+# los distintos equipos del aula conectados por red.
+# El SERVIDOR expone a los clientes la carpeta /mnt/SRPBACKUP
+# por defecto se expone en solo lectura (ro).
+# los CLIENTES acceden al contenido de la carpeta expuesta en 
+# la carpeta /mnt/NFS.
+# Una vez actualizado el SO de un equipo y hecha la copia personalizada
+# se puede arrancar el servidor NFS en ese equipo y arrancando
+# clientes NFS en el resto de los equipos para copiar los archivos
+# de la copia personalizada a la carpeta /mnt/SRPBACKUP/copia2 de dichos
+# equipos que sustituiría a la version anterior. Restaurando la 
+# copia personalizada en cada equipo tendríamos la nueva version del SO
+# a falta de configurar el nombre de equipo.
+# ---------------------------------------------------------
+set -e
+
+MOUNT_SRC="/mnt/SRPBACKUP"
+MOUNT_DST="/mnt/NFS"
+LABEL="SRPBACKUP"
+CLIENT_NET="192.168.1.0/24"
+
+# Opciones de exportación
+EXPORT_OPTS_RW="rw,sync,no_subtree_check,no_root_squash,fsid=0"
+EXPORT_OPTS_RO="ro,sync,no_subtree_check,fsid=0"
+
+# ---------------------------------------------------------
+# Utilidades
+# ---------------------------------------------------------
+
+detect_client_net() {
+  # Interfaz usada para salir a la red
+  local IFACE
+  IFACE=$(ip route show default 0.0.0.0/0 | awk '{print $5}' | head -n1)
+
+  if [ -z "$IFACE" ]; then
+    echo "ERROR: No se pudo detectar la interfaz de red"
+    exit 1
+  fi
+
+  # IP con prefijo (ej: 192.168.1.50/24)
+  local IP_CIDR
+  IP_CIDR=$(ip -4 -o addr show dev "$IFACE" | awk '{print $4}' | head -n1)
+
+  if [ -z "$IP_CIDR" ]; then
+    echo "ERROR: No se pudo obtener la IP de $IFACE"
+    exit 1
+  fi
+
+  # Calcular red usando ipcalc si existe, si no, fallback simple
+  if command -v ipcalc >/dev/null 2>&1; then
+    CLIENT_NET=$(ipcalc -n "$IP_CIDR" | awk -F= '{print $2}')"/`+'${IP_CIDR#*/}"\n'+
+`  else
+    # Fallback simple: asume /24 (muy común)
+    CLIENT_NET="$(echo "$IP_CIDR" | sed 's/\\.[0-9]\\+\\/.*/.0\\/24/')"
+  fi
+}
+
+
+show_ip() {
+  echo
+  echo "IP(s) del servidor:"
+  ip -4 -o addr show | awk '{print " - " $2 ": " $4}'
+  echo
+}
+
+# ---------------------------------------------------------
+# Permitiendo servir NFS en firewal SystemRescueCD
+# ---------------------------------------------------------
+setup_firewall_nfs() {
+  echo "Configurando firewall para NFS..."
+
+  iptables -P INPUT DROP
+  iptables -P FORWARD DROP
+  iptables -P OUTPUT ACCEPT
+
+  iptables -F
+  iptables -X
+
+  # Permitir loopback
+  iptables -A INPUT -i lo -j ACCEPT
+
+  # Permitir conexiones establecidas
+  iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+  # ICMP (ping)
+  iptables -A INPUT -p icmp --icmp-type 8 -j ACCEPT
+
+  # RPC / NFS
+  iptables -A INPUT -p tcp --dport 111 -j ACCEPT
+  iptables -A INPUT -p udp --dport 111 -j ACCEPT
+  iptables -A INPUT -p tcp --dport 2049 -j ACCEPT
+  iptables -A INPUT -p udp --dport 2049 -j ACCEPT
+  iptables -A INPUT -p tcp --dport 20048 -j ACCEPT
+  iptables -A INPUT -p udp --dport 20048 -j ACCEPT
+
+  echo "Firewall NFS configurado"
+}
+
+# ---------------------------------------------------------
+# Servidor
+# ---------------------------------------------------------
+start_server() {
+  MODE="$1" # ro | rw
+  [ "$MODE" != "rw" ] && MODE="ro"
+
+  echo "=== MODO SERVIDOR ==="
+
+  detect_client_net
+
+  echo "Red detectada automáticamente: $CLIENT_NET"
+
+  systemctl start rpcbind || true
+  systemctl start nfs-server || systemctl start nfs || true
+#  systemctl stop firewalld || true
+
+  OPTS="$EXPORT_OPTS_RW"
+  [ "$MODE" = "ro" ] && OPTS="$EXPORT_OPTS_RO"
+  #echo "$MOUNT_SRC $CLIENT_NET(rw,sync,no_subtree_check,no_root_squash)" > /etc/exports
+  echo "$MOUNT_SRC $CLIENT_NET(rw,sync,no_subtree_check,no_root_squash)" > /etc/exports
+  echo "$MOUNT_SRC $CLIENT_NET($OPTS)" > /etc/exports
+  exportfs -rav
+
+  show_ip
+
+  echo "Servidor NFS listo"
+  echo "Exportando: $MOUNT_SRC ($MODE)"
+  echo
+  echo "NO CIERRES ESTA TERMINAL"
+}
+
+stop_server() {
+  echo "Parando servidor NFS"
+  systemctl stop nfs-server
+  systemctl is-active nfs-server
+  echo "Servidor detenido y limpio"
+}
+
+# ---------------------------------------------------------
+# Cliente
+# ---------------------------------------------------------
+start_client() {
+  SERVER_IP="$1"
+  [ -z "$SERVER_IP" ] && {
+    echo "Uso: $0 client <IP_SERVIDOR>"
+    exit 1
+  }
+
+  echo "=== MODO CLIENTE ==="
+
+  mkdir -p "$MOUNT_DST"
+
+  #mount -t nfs "$SERVER_IP:$MOUNT_SRC" "$MOUNT_DST"
+  mount -t nfs -o soft,nolock "$SERVER_IP:$MOUNT_SRC" "$MOUNT_DST"
+
+  echo
+  echo "NFS montado en $MOUNT_DST"
+  echo "Ya puedes acceder desde el entorno gráfico"
+}
+
+stop_client() {
+  echo "Desmontando cliente: $MOUNT_DST"
+  umount "$MOUNT_DST"
+}
+
+
+case "$1" in
+  server)
+    setup_firewall_nfs
+    start_server "$2"
+    ;;
+  stop-server)
+    stop_server
+    ;;
+  client)
+    start_client "$2"
+    ;;
+  stop-client)
+    stop_client
+    ;;
+  *)
+    echo "Uso:"
+    echo "  $0 server [ro|rw]"
+    echo "  $0 stop-server"
+    echo "  $0 client <IP_SERVIDOR>"
+    echo "  $0 stop-client"
+    exit 1
+    ;;
+esac
+`;
+            folder5.file('srp_nfs.sh', herramienta);
 
 
 
