@@ -710,6 +710,8 @@ ${pEFI.activa ? '' : '#'}G4P1_FS="fat32"
                             }
                             if (!pResW2.activa) {
                                 texto = reemplazarTexto(texto, 'segunda particion recuperacion windows', '');
+                                 if (['autorun4'].includes(archivo.nombre))texto = reemplazarTexto(texto, '2 segunda particion recuperacion windows', '');
+
                             }
 
                             folder.file(archivo.nombre, texto);
@@ -1290,6 +1292,119 @@ case "$1" in
 esac
 `;
             folder5.file('srp_nfs.sh', herramienta);
+            if(pWin.activa){
+                herramienta = `#!/bin/bash
+# Este script permite realizar el BACKUP de Windows, la carpeta en que se 
+# guarda se define desde el teclado igual que en las opciones ESPECIALES.
+# El escript NO funciona en MODO GRAFICO, por lo que se debe ejecutar en una
+# TERIMNAL AUTENTICA de TEXTO. 
+# Si estamos en modo gráfico se puede salir desde el botón inicio seleccionando
+# Log-Out y luego de nuevo Log-Out, o bien con Ctrl+Alt+F2.
+#
+# Si finalizado el script, queremos seguir en la sesisión de SystemRescueCD
+# antes de que pasen los 30s de espera para reincialr se debe pulsar Ctrl+c
+#
+
+if [ -n "$DISPLAY" ]; then
+    echo "ERROR: No ejecute este script desde el modo gráfico."
+    echo "Puede hacer Log-Oou/Log-Out desde el boton inicio o"
+    echo "cambie a una consola con Ctrl+Alt+F2 y ejecútelo allí."
+    exit 1
+fi
+
+echo "Entorno correcto. Continuando..."
+umount /dev/sd${pWin.disco}${pWin.particion}
+cd  /run/archiso/bootmnt/autorun
+chmod 755 *
+./autorun1
+./autorun6
+mount /dev/sd${pWin.disco}${pWin.particion} /mnt/WIN`;
+                folder5.file('BackupWin.sh', herramienta);
+                herramienta = `#!/bin/bash
+# Este script permite RESTAURAR WINDOWS, la carpeta desde la que se restaura
+# se define desde el teclado igual que en las opciones ESPECIALES.
+# El escript NO funciona en MODO GRAFICO, por lo que se debe ejecutar en una
+# TERIMNAL AUTENTICA de TEXTO. 
+# Si estamos en modo gráfico se puede salir desde el botón inicio seleccionando
+# Log-Out y luego de nuevo Log-Out, o bien con Ctrl+Alt+F2.
+#
+# Si finalizado el script, queremos seguir en la sesisión de SystemRescueCD
+# antes de que pasen los 30s de espera para reincialr se debe pulsar Ctrl+c
+#
+
+if [ -n "$DISPLAY" ]; then
+    echo "ERROR: No ejecute este script desde el modo gráfico."
+    echo "Puede hacer Log-Oou/Log-Out desde el boton inicio o"
+    echo "cambie a una consola con Ctrl+Alt+F2 y ejecútelo allí."
+    exit 1
+fi
+
+echo "Entorno correcto. Continuando..."
+umount /dev/sd${pWin.disco}${pWin.particion}
+cd  /run/archiso/bootmnt/autorun
+chmod 755 *
+./autorun1
+./autorun4
+mount /dev/sd${pWin.disco}${pWin.particion} /mnt/WIN`;
+                folder5.file('RestauraWin.sh', herramienta);
+            }
+            if(pMAX.activa){
+                herramienta = `#!/bin/bash
+# Este script permite realizar el BACKUP de Windows, la carpeta en que se 
+# guarda se define desde el teclado igual que en las opciones ESPECIALES.
+# El escript NO funciona en MODO GRAFICO, por lo que se debe ejecutar en una
+# TERIMNAL AUTENTICA de TEXTO. 
+# Si estamos en modo gráfico se puede salir desde el botón inicio seleccionando
+# Log-Out y luego de nuevo Log-Out, o bien con Ctrl+Alt+F2.
+#
+# Si finalizado el script, queremos seguir en la sesisión de SystemRescueCD
+# antes de que pasen los 30s de espera para reincialr se debe pulsar Ctrl+c
+#
+
+if [ -n "$DISPLAY" ]; then
+    echo "ERROR: No ejecute este script desde el modo gráfico."
+    echo "Puede hacer Log-Oou/Log-Out desde el boton inicio o"
+    echo "cambie a una consola con Ctrl+Alt+F2 y ejecútelo allí."
+    exit 1
+fi
+
+echo "Entorno correcto. Continuando..."
+umount /dev/sd${pMAX.disco}${pMAX.particion}
+cd  /run/archiso/bootmnt/autorun
+chmod 755 *
+./autorun1
+./autorun7
+mount /dev/sd${pMAX.disco}${pMAX.particion} /mnt/MAX`;
+                folder5.file('BackupMax.sh', herramienta);
+                herramienta = `#!/bin/bash
+# Este script permite RESTAURAR MAX, la carpeta desde la que se restaura
+# se define desde el teclado igual que en las opciones ESPECIALES.
+# El escript NO funciona en MODO GRAFICO, por lo que se debe ejecutar en una
+# TERIMNAL AUTENTICA de TEXTO. 
+# Si estamos en modo gráfico se puede salir desde el botón inicio seleccionando
+# Log-Out y luego de nuevo Log-Out, o bien con Ctrl+Alt+F2.
+#
+# Si finalizado el script, queremos seguir en la sesisión de SystemRescueCD
+# antes de que pasen los 30s de espera para reincialr se debe pulsar Ctrl+c
+#
+
+if [ -n "$DISPLAY" ]; then
+    echo "ERROR: No ejecute este script desde el modo gráfico."
+    echo "Puede hacer Log-Oou/Log-Out desde el boton inicio o"
+    echo "cambie a una consola con Ctrl+Alt+F2 y ejecútelo allí."
+    exit 1
+fi
+
+echo "Entorno correcto. Continuando..."
+umount /dev/sd${pMAX.disco}${pMAX.particion}
+cd  /run/archiso/bootmnt/autorun
+chmod 755 *
+./autorun1
+./autorun5
+mount /dev/sd${pMAX.disco}${pMAX.particion} /mnt/MAX`;
+                folder5.file('RestauraMax.sh', herramienta);
+            }
+            
 
 
 
