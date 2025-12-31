@@ -710,7 +710,7 @@ ${pEFI.activa ? '' : '#'}G4P1_FS="fat32"
                             }
                             if (!pResW2.activa) {
                                 texto = reemplazarTexto(texto, 'segunda particion recuperacion windows', '');
-                                 if (['autorun4'].includes(archivo.nombre))texto = reemplazarTexto(texto, '2 segunda particion recuperacion windows', '');
+                                if (['autorun4'].includes(archivo.nombre)) texto = reemplazarTexto(texto, '2 segunda particion recuperacion windows', '');
 
                             }
 
@@ -1152,8 +1152,8 @@ detect_client_net() {
 
   # Calcular red usando ipcalc si existe, si no, fallback simple
   if command -v ipcalc >/dev/null 2>&1; then
-    CLIENT_NET=$(ipcalc -n "$IP_CIDR" | awk -F= '{print $2}')"/`+'${IP_CIDR#*/}"\n'+
-`  else
+    CLIENT_NET=$(ipcalc -n "$IP_CIDR" | awk -F= '{print $2}')"/`+ '${IP_CIDR#*/}"\n' +
+                `  else
     # Fallback simple: asume /24 (muy común)
     CLIENT_NET="$(echo "$IP_CIDR" | sed 's/\\.[0-9]\\+\\/.*/.0\\/24/')"
   fi
@@ -1292,7 +1292,7 @@ case "$1" in
 esac
 `;
             folder5.file('srp_nfs.sh', herramienta);
-            if(pWin.activa){
+            if (pWin.activa) {
                 herramienta = `#!/bin/bash
 # Este script permite realizar el BACKUP de Windows, la carpeta en que se 
 # guarda se define desde el teclado igual que en las opciones ESPECIALES.
@@ -1348,7 +1348,7 @@ chmod 755 *
 mount /dev/sd${pWin.disco}${pWin.particion} /mnt/WIN`;
                 folder5.file('RestauraWin.sh', herramienta);
             }
-            if(pMAX.activa){
+            if (pMAX.activa) {
                 herramienta = `#!/bin/bash
 # Este script permite realizar el BACKUP de Windows, la carpeta en que se 
 # guarda se define desde el teclado igual que en las opciones ESPECIALES.
@@ -1404,8 +1404,23 @@ chmod 755 *
 mount /dev/sd${pMAX.disco}${pMAX.particion} /mnt/MAX`;
                 folder5.file('RestauraMax.sh', herramienta);
             }
-            
+            let folder6 = zip.folder("herramientas/VirtualBox");
+            herramienta = `#!/bin/bash
+# En las pruebas mediante máquinas virtuales de VirtualBox
+# para poder intercambiar información entre el host y las
+# máquinas virtuales se puede utilizar las CARPETAS COMPARTIDAS 
+# de VirtualBox.
+#
+# Para visualizar la carpeta compartida en VirtualBox en SRP
+# arrancando SystemRescueCD, la carpeta compartida se comparte
+# con el nombre SRP_HOST en la cofiguracion de la máquina de 
+# VirtualBox y aparece montada en el SystemRescueCD de la máquina
+# virtual en la carpeta  /mnt/host cuando se ejecuta este script.
 
+mkdir -p /mnt/host
+mount -t vboxsf SRP_HOST /mnt/host
+echo "La carpeta compartida con el nombre SRP_HOST en VirtualBox estará montada en: /mnt/host"`;
+            folder6.file('CarpetaCompartidaVirtualBoxSRP.sh', herramienta);
 
 
             //CARGAMOS LOS FONDOS DE LOS MENUS
