@@ -332,6 +332,7 @@
             configuracion.particiones.forEach((particion, index) => {
                 let tab = document.createElement("div");
                 tab.className = "tab";
+                tab.id = particion.nombre + '_tab';
                 tab.innerText = particion.nombre;
                 tab.style.backgroundColor = `hsl(${index * 60}, 70%, 80%)`;
                 tab.onclick = () => mostrarMenu(index, tab);
@@ -444,8 +445,20 @@
                         particion[clave].UUID = null;
                         label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                     }
-                    checkbox.onchange = () => {
+                    checkbox.onchange = () => {                        
                         particion[clave].activa = checkbox.checked;
+                        if(clave==='particionWIN'&&!particion[clave].activa){
+                            //si desactiva windows desactiva las particiones de recuperación
+                            particion['particionRES'].activa=false;
+                            particion['particionRES2'].activa=false;
+                            document.getElementById(particion.nombre + '_tab').click();// = particion.nombre + '_tab';
+                        }
+                        if(clave==='particionMAX'&&!particion[clave].activa){
+                            //si desactiva MAX desactiva la particion swap
+                            particion['particionSWAP'].activa=false;
+                            document.getElementById(particion.nombre + '_tab').click();
+                         
+                        }
                         document.getElementById("error").innerText = '';
                     }
 
