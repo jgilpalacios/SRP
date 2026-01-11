@@ -465,7 +465,7 @@
                     div.appendChild(label);
                     div.appendChild(discoSelect);
                     div.appendChild(select);
-                    if (/*clave !== 'particionEFI' &&*/ clave !== 'particionSRPBACKUP' && clave !== 'particionSRP') div.appendChild(checkbox);
+                    if (/*clave !== 'particionEFI' && clave !== 'particionSRPBACKUP' &&*/ clave !== 'particionSRP') div.appendChild(checkbox);
                     let label2 = document.createElement("label");
                     label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                     div.appendChild(label2);
@@ -628,7 +628,13 @@
             let textoSWAP = 'no_hay_swap';
             if (pSWAP.activa) textoSWAP = '/dev/sd' + pSWAP.disco + pSWAP.particion;
             let pSRP = configuracion.particiones[1].particionSRP;
-            let pSRPBACKUP = configuracion.particiones[1].particionSRPBACKUP;
+            //Solo SRP sin SRPBACKUP se gestiona en srp.js con la etiqueta ##tcopytoram## que se sustituye por copytoram o nada
+            //la variable tcopytoram, y montando la particion SRP en mnt/SRP y mnt/SRPBACKUP, en autorun.js no se precisan cambios.
+            //el arranque de system rescue cd se hace en menuavanzado y la generacion de BackUpas con la opcion "copytoram" para que 
+            // SRP sea escribible, no es necesario que lo sea en las restauraciones.
+            let pSRPBACKUP = configuracion.particiones[1].particionSRPBACKUP.activa? configuracion.particiones[1].particionSRPBACKUP:configuracion.particiones[1].particionSRP;
+            let tcopytoram = configuracion.particiones[1].particionSRPBACKUP.activa?'':'copytoram ';
+            ///
             let ngrupos = 0;
             [pWin, pMAX, pSWAP].forEach(grupo => {
                 if (grupo.activa) ngrupos++;
@@ -917,6 +923,14 @@ fi`;
                         texto = nuevoTexto;
                     };
                 }
+                //solo SRP sin SRPBACKUP se gestiona en srp.js con la etiqueta ##tcopytoram## que se sustituye por copytoram o nada
+                if(['menuavanzado.cfg','menugenewin2.cfg','menugenewinmax2.cfg','menugenemax2.cfg','menugeneEFI2.cfg','menuespecial.cfg']){
+                    let partes=texto.split('##tcopytoram##');
+                    if(partes.length>1){
+                        texto=partes.join(tcopytoram);
+                    }
+                }
+                ///añadimos el archivo si procede
                 if (['menuavanzado.cfg', 'menucopia1.cfg', 'menucopia2.cfg', 'menuprincipal.cfg', 'menuespecial.cfg'].includes(archivo.nombre)) {
                     folder2.file(archivo.nombre, texto);
                 } else {
