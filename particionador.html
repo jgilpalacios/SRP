@@ -379,12 +379,13 @@ WIN_PART${i}=${win_part}\n\n${uuid_xxx}\n\n`+ `### El disco sd${letra} debe tene
             //if (partRedimensionar < 1) errores += `Se pide redimensionar ${partRedimensionar} particiones de Windows, solo está pensado para redimensionar 1.\n`;
             if (partLinusSwap > 1) errores += `Se pide crear ${partLinusSwap} particiones de intercambio, puede haber 0 o 1.\n`;
             if (nSRP < 1 || nSRP > 1) errores += `Hay ${nSRP} particiones SRP, DEBER HABER 1.\n`;
-            if (nSRPBACKUP !== 1) errores += `Hay ${nSRPBACKUP} particiones SRPBACKUP, DEBER HABER 1.\n`;
+            if (nSRPBACKUP > 1) errores += `Hay ${nSRPBACKUP} particiones SRPBACKUP, DEBER HABER 1 (ó ninguna).\n`;
+            if (nSRPBACKUP ===0) mensajes='¡¡No se ha previsto partición para SRPBACKUP, se asume que los backups deberán guardar en SRP!!\n'+mensajes;
             if (errores === '') {
                 downloadTextFile('particionador.sh', textoScripts);
                 alert('No se han detectado errores en la generación de scripts, se ha descargado el archivo particionador.sh,\n' +
                     'no obstante el al ejecutarlo se reparticionará el disco(s) y si no fuera correcto podrían perderse los datos.\n' +
-                    'conviene que se disponga de copias de seguridad antes de ejecutarlo y ver que funciona correctamente.');
+                    'conviene que se disponga de copias de seguridad antes de ejecutarlo y ver que funciona correctamente.\n\n'+mensajes);
             } else alert(errores)
             alert(mensajes + '\nSRP: ' + nSRP + '\nSRPBACKUP: ' + nSRPBACKUP);
         }

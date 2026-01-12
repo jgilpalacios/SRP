@@ -1078,7 +1078,12 @@ systemctl restart smbd
 # Confirmar que el cambio fue exitoso
 echo "El grupo de trabajo ha sido cambiado a '$nuevo_grupo_trabajo'."`;
                 folder4.file('cambiar_grupo_trabajo.sh', herramienta);
-                let herraux = ('"/dev/sd' + pSRP.disco + pSRP.particion + '" "/dev/sd' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"');
+                //Si solo se usa la particion SRP tanto para SystenRescueCD como para las carpetas coipia1, copia2,
+                //no se crea partición para SRPBACKUP y por tanto no hay que ocultarla.
+                let textoSRPBACKUP='" "/dev/sd' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"'
+                if((pSRP.disco + pSRP.particion)===(pSRPBACKUP.disco + pSRPBACKUP.particion))textoSRPBACKUP='"';
+//                let herraux = ('"/dev/sd' + pSRP.disco + pSRP.particion + '" "/dev/sd' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"');
+                let herraux = ('"/dev/sd' + pSRP.disco + pSRP.particion + textoSRPBACKUP);
                 if (pWin.activa) {
                     herraux += (' "/dev/sd' + pWin.disco + pWin.particion + '"');
                     if (pResW.activa) herraux += (' "/dev/sd' + pResW.disco + pResW.particion + '"');
