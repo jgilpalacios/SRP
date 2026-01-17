@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html><head>
+  
+  <meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  <title></title>
+
+  
+</head><body>
+Para el uso más frecuente y tal y como se recomienda SRP maneja en la
+partición SRPBACKUP dos carpetas en las que se incluyen los archivos de
+copias de seguridad de los dos sistemas operativos que puede gestionar
+(Windows y MAX). El nombre de dichas carpetas comienza por la palabra
+'copia' y un número (1 y 2) de forma que:<br>
+
+<ul>
+
+  <li>la copia de fábrica guardará sus backups en la carpeta <span style="font-weight: bold;">copia1</span>;</li>
+  <li>la copia personalizada guardará sus backpups en la carpeta <span style="font-weight: bold;">copia2</span>.</li>
+</ul>
+
+Por otra parte, por la filosofía que considera la copia de fábrica como
+una copia personalizada debidamente probada y comprobada su
+estabilidad, se plantea que la generación de la copia de fabrica no se
+hicieera por los menus normales de SRP, sino que sería una tarea que
+efectuaría el administrador accediendo con una de las opciones de
+arranque con SystemRescue para mover dentro del entorno linux del
+SO&nbsp; SystemRescue de la carpeta copia2 a la carpeta copia1 los
+archivos de backup que considerara consolidados como copia de fábrica.<br>
+
+La opción de arranque en el entorno linux de SystemRescue es lo
+suficiente flexible y potente (y por tanto con cierto riesgo) para
+realizar esa tarea y prácticamente cualquier otra que se pueda plantear.<br>
+
+Dentro de las carpeta copiaX (donde X podria ser 1 o 2), los archivos
+de bakup que corresponden a MAX y Windows serían:<br>
+
+<ul>
+
+  <li>MAX: <br>
+  </li>
+  <ul>
+    <li><span style="font-weight: bold;">img_max.gz00, img_max.gz01</span>,
+... que corresponden a la partición principal de MAX</li>
+    <li><span style="font-weight: bold;">autorun5_swap,</span> que
+corresponde a información sobre la partición swap se haya incluido o no.</li>
+  </ul>
+  <li>Windows</li>
+  <ul>
+    <li><span style="font-weight: bold;">img_win_windows.gz00,
+img_win_windows.gz01</span>, ... que corresponden a la partición
+principal de windows (la que equivale a C:).</li>
+    <li><span style="font-weight: bold;">img_win_system.gz,</span> que
+corresponde a la primera (y a veces unica) particion de recuperación de
+windows.</li>
+    <li><span style="font-weight: bold;">img_win_systemp2.gz</span>,
+que en aquellas instalaciones de windows con dos particiones de
+recuperación correspondería a la segunda partición.</li>
+  </ul>
+</ul>
+
+Es decir que moviendo estos archivos de copia2 a copia1 pasaríamos a
+tener la copia de fábrica a partir de la personalizada.<br>
+
+<br>
+
+No obstante y para dar más flexibilidad en cuanto al número y tipo de
+backups que se quieran tener en el equipo, se na planteadopermitir una
+gestión más flexible sin que se precise entrar con el entorno linux de
+SystemRescue (que otorga flexibilidad completa a costa de implicar
+ciertos riesgos) ae ha ampliado el menú de las O<span style="font-weight: bold;">pciones Avanzadas </span>de SRP con una
+entrada más para el superusuario que son las <span style="font-weight: bold; color: rgb(153, 0, 0);">Opciones Especiales</span>:<br>
+
+<img style="width: 799px; height: 597px;" alt="Opciones Especiales" src="images/OpcionesEspeciales/OpcionesEspeciales.png"><br>
+
+Esta entrada del menú avanzado lleva a otro menú que nos permite
+trabajar en una carpeta que puede ser distinta de copia1 y copia2
+(maqueta de fabrica o personalizada) con backups o restauraciones de
+Windows y MAX, o volver a meú avanzado si desistimos:<br>
+
+<img style="width: 799px; height: 599px;" alt="" src="images/OpcionesEspeciales/OpcionesEspeciales2.png"><br>
+
+Una precaución que se debe tener a la hora de usar las opciones
+contenidas en el menú: Opciones especiales, es que el espiritu de SRP
+es contener en el espacio de almacenamiento del propio equipo de los
+archivos de copia de seguridad de los SO con que cuenta el equipo, y si
+bien se ha considerado que con los tamaños normales de los discos
+actuales son suficientes para manejar cierto número de copias de
+seguridad, no tenemos un espacio ilimitado por lo que el uso poco
+cuidadoso de la posibilidad que brindan las Opciones especiales llevara
+a crear un numero de copias de seguridad diferentes que llevara a
+agotar el espacio que se reservó para la partición SRPBACKUP.<br>
+
+Teniendo en cuenta estas precauciones, estas opciones nos permiten
+generar backups o restaurar tanto windows como MAX a o desde carpetas
+distintas de copia1 y copia2, eso sí, se ha obligado a que los nombres
+de las carpetas comiencen por la palabra <span style="font-weight: bold;">copia</span>, pudiendo añadir como
+coletilla cualquier combinación de letras y números a continuación.<br>
+
+Cuando entremos con cualquiera de las cuatro opciones del menu
+anterior, arrancará system rescue, nos mostrará en rojo el espacio
+disponible en la partición SRPBACKUP, nos listará numeradas las carpeta
+cuyo nombre comienza con la palabra <span style="font-weight: bold;">copia</span>
+y además dos opciones adicionales:<br>
+
+<ul>
+
+  <li>0: introducir manualmente el nombre de la carpeta ya que ninguna
+de las numeradas nos valdría</li>
+  <li>x: Salir sin definir el nombre, que descarta el proceso y
+reinicia
+el equipo (imagen que sigue).</li>
+</ul>
+
+<br>
+
+<img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionNumX.png">
+Elegir cualquiera de los otros numeros de las opciones (1 o 2 en la
+imagen) llevaría a realizar el proceso (en este caso backup de windows)
+sobre las carpetas: <br>
+
+<ul>
+
+  <li>si se elige 1 sobre la carpeta copia2</li>
+  <li>si se elige 2 sobre la carpeta copiakk</li>
+</ul>
+
+<img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionNum.png"><br>
+
+Si elegimos una de las opciones numeradas por ejemplo la opción 2 es
+decir trabajar sobre la carpeta copiakk, nos sacará una confirmación de
+la carpeta elegida en rojo y nos pedirá que confirmemos indicando si o
+no (s/n), todavía podemos descartar realizar el proceso poniendo 'n'
+(imagen que sigue),&nbsp; si ponemos 's' se llevaría a cabo:<br>
+
+<br>
+
+<img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionNumConfirmarNo.png">
+<br>
+
+Si ninguna de las carpetas listadas nos vale para el proceso, se
+seleccionaría la opción 0, para poder indicar con el teclado la
+coletilla a añadir a copia, si pulsamos esa opción:<br>
+
+<br>
+
+<img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionTexto.png">
+Nos aparece una linea que nos invita a teclear un nombre que conste del
+letras y/o numeros y si quisieramos cancelar el proceso en este momento
+basta con teclear el carácter # para acabar el proceso sin que se lleve
+a cabo, ver imagen siguiente:<br>
+
+<img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionTextoNo.png">
+<br>
+
+Si tecleamos un nombre válido por ejemplo "MAX", aparecerá una línea
+indicando que el proceso se llevará a cabo sobre la carpeta <span style="font-weight: bold;">copiaMAX</span> en rojo nos pedirá que
+confirmemos con sí o no (s/n):<br>
+
+<img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionTextoMAX.png">
+<br>
+
+Todavía podemos desistir del proceso si pulsamos '<span style="font-weight: bold;">n</span>' (imagen que sigue), si pulsamos
+'s' el proceso se llevará a cabo utilizando la carpeta 'copiaMAX'.<br>
+
+<img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionTextoMAXno.png">
+<br>
+
+Como se vé con estas Opciones especiales, se brinda la posibilidad de
+gestionar de forma bastante segura copias diferentes de las dos
+estandar (fabrica y personalizada) de SRP, pero consideramos que no se
+debe abusar por las limitaciones que normalmente nos encontraremos en
+los equipos reales.<br>
+
+</body></html>

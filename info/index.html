@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Menús por pestañas recursivos</title>
+
+    <style>
+        /* ====== ESTILOS GENERALES ====== */
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        /* ====== CONTENEDOR DE PESTAÑAS ====== */
+        .tabs {
+            border: 1px solid #aaa;
+            margin: 10px;
+        }
+
+        /* ====== MENÚ ====== */
+        .tab-menu {
+            display: flex;
+            background: #eee;
+        }
+
+        .tab-menu button {
+            padding: 10px 15px;
+            border: none;
+            background: #ddd;
+            cursor: pointer;
+        }
+
+        .tab-menu button.active {
+            background: #fff;
+            font-weight: bold;
+            border-bottom: 2px solid #0077cc;
+        }
+
+        /* ====== CONTENIDOS ====== */
+        .tab-content {
+            position: relative;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .tab-page {
+            display: none;
+            position: relative;
+            z-index: 0;
+        }
+
+        .tab-page.active {
+            display: block;
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>SRP</h1>
+
+    <!-- NIVEL 1 -->
+    <div class="tabs">
+        <div class="tab-menu">
+            <button>Inicio</button>
+            <button id="Funcionamiento">Funcionamiento</button>
+            <button id="Instalación">Instalación</button>
+            <button>Avanzado</button>
+            <button>Configuración</button>
+            <button>MAX</button>
+            <button>Opciones especiales</button>
+        </div>
+
+        <div class="tab-content">
+            <div class="tab-page">
+                <p style="text-align: justify;">SRP significa Sistema de Restauración de Particiones. Es un sistema con
+                    el cual podemos hacer una copia de las particiones del disco duro del equipo en el mismo disco duro,
+                    para poder restaurarlas en caso necesario.</p>
+                <p style="text-align: justify;">Para saber más en el menú <strong>SRP</strong> de la barras de
+                    herramientas se accede a los distintos apartados. Los mas generales y que permiten hacerse una idea
+                    de las características, funcionamiento e instalación son:</p>
+                <ul style="text-align: justify;">
+                    <li><a href="#"
+                            onclick="event.preventDefault(); document.getElementById('Funcionamiento').click();">Funcionamiento</a>
+                    </li>
+                    <li><a href="#"
+                            onclick="event.preventDefault(); document.getElementById('Instalación').click();">Instalación</a>
+                    </li>
+                </ul>
+                <p style="text-align: justify;">Esta versión deriva de la versión generada para instalción en equipos
+                    con arranque Legacy y se adaptó para poder usarla tanto en los equipos antiguos con arranque Legacy
+                    como en los más modernos con arranque UEFI.</p>
+                <p style="text-align: justify;">Recientemente se vió que la versión generada tras actualizaciones o
+                    instalación de nuevos programas en Windows al solicitar el rearranque , en ocasiones, se perdía la
+                    referencia a las distintas particiones de los sistemas operativos. Esto parece que se debe a que
+                    dejan de funcionar las referencias a las distintas particiones del disco del tipo
+                    hd[disco].[particion] (ejemplo hd1,1) que son las que se usaban en los scripts de los menús de Grub
+                    de SRP.</p>
+                <p style="text-align: justify;">Para resolver este problema se ha actualizado la aplicación para que
+                    además de la referencia por disco y partición, añada una referencia por UUID (Universally Unique
+                    Identifier, Identificador Universal Único) de las distintas particiones de forma que si el primer
+                    procedimiento fallase el segundo se activaría y encontraría las particiones correspondientes,ya que
+                    se supone que le UUID es único para cada una de las particiones de un disco.</p>
+                <p style="text-align: justify;">Tal como ha quedado la aplicación existe la opción de generar srp.zip
+                    sin estas referencias UUID (si con la versión previa funcionaba bien para que cambiar), o bien con
+                    ellas, pues si se accede a la página de para generar nuestro archivo con el sistema SRP (srp.zip) se
+                    verá que con respecto a versiones previas se ha añadido la casilla de check: 'Usar UUID'. Si se
+                    marca nos comprobará que cargamos un archivo con las UUIDs de las particiones de nuestro/s disco/s
+                    (particiones.txt). Si no se marca se generará sin esas referencias (y el posible inconveniente de
+                    fallos al rearrancar tras actualizaciones de windows). Al marcar la casilla nos proporciona la orden
+                    para generar particiones.txt ejecutando la orden en una consola linux.</p>
+                <p style="text-align: justify;">El resto del uso es exactamente lo que se explicó cuando no se había
+                    añadido la posibilidad de refereciar las particiones por UUID, para ver lasa novedades que aporta
+                    esta nueva versión y como aplicarlas se puede ver el video:</p>
+                <p style="text-align: justify;"><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                        src="https://mediateca.educa.madrid.org/video/ztkcu3rtnaccgqo7/fs" frameborder="0"
+                        scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                <p style="text-align: justify;">Visto los inconvenientes de no usar las UUIDs se preguntará sobre la
+                    conveniencia de mantener la posibilidad de obtener srp.zip sin esas referencias. La razón es que
+                    aunque se tengan equipos con discos con las mismas características y el mismo particionado, las
+                    UUIDs de las particiones serán distintas ya que al generarse una partición se busca un número al
+                    azar y en general es muy poco probable que estos coincidan. Otra cosa es que si se clona un disco ya
+                    particionado sobre los otros discos, en este caso si que coincidirán los números de las particiones
+                    equivalentes en todos los equipos.</p>
+                <p style="text-align: justify;">Es decir que en equipos iguales pero que se particionan
+                    independientemente el srp.zip con UUIDs de uno de los equipos no sería totalmente correcto en los
+                    otros ya que los UUIDs en las particiones equivalentes de unos y otros al haberse generado de forma
+                    independiente no serían las mismas. Si el srp.zip se obtuvo sin UUIDs sería, en cambio, válido para
+                    todos (pero con el inconveniente del posible fallo en los reinicios de windows).</p>
+                <p style="text-align: justify;">Si todos los discos se obtuvieron por clonado de uno, el srp.zip
+                    obtenido con UUIDs obtenido de uno de ellos si que sería válido para todos.</p>
+                <p style="text-align: justify;">No obstante como se habrá visto en el video anterior teniendo a mano el
+                    esquema de particionado del primer equipo en el archivo (configuración.txt), usando el botón 'cargar
+                    configuración.txt' y obteniendo el archivo (particiones.txt) en apenas unos segundos podemos obtener
+                    el srp.zip totalmente adaptado a las UUIDs de cada equipo.</p>
+                <p style="text-align: justify;">En el vídeo siguiente se simula como obtener el srp.zip totalmente
+                    adaptado partiendo de uno que tuviera el esquema de particiones válido (realmente solo se necesita
+                    configuración.txt que viene en la carpeta herramientas del srp.zip):</p>
+                <p style="text-align: justify;"><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                        src="https://mediateca.educa.madrid.org/video/l4kylkgz7d5q8cgv/fs" frameborder="0"
+                        scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+            </div>
+            <div class="tab-page">
+                <p style="text-align: justify;"><span style="text-decoration: underline;"><span
+                            style="font-size: 14pt;">Introducción</span></span></p>
+                <p style="text-align: justify;"><br />SRP significa <strong>Sistema de Restauración de
+                        Particiones</strong>. Es un sistema con el cual <strong>podemos hacer una copia de las
+                        particiones del disco duro del equipo</strong> en el <strong>mismo disco duro</strong>, para
+                    poder restaurarlas en caso necesario.</p>
+                <p style="text-align: justify;">Está basado en la distribución <a href="http://www.sysresccd.org/"
+                        target="_blank" rel="noopener">SystemRescueCD,</a> <a href="https://www.gnu.org/software/grub/"
+                        target="_blank" rel="noopener">GRUB</a> como gestor de arranque y <a
+                        href="https://wiki.gentoo.org/wiki/Efibootmgr/es" target="_blank" rel="noopener">efibootmgr</a>,
+                    herramienta popular para manipular los ajustes EFI a fin de crear y gestionar entradas de arranque
+                    capaces de arrancar Línux (o cualquier otro sistema operativo EFI). Básicamente consiste en realizar
+                    un particionado del disco/s del equipo, implantar un distribución de linux ligera, y consta de unos
+                    scripts para grub y la shell con los que se ha automatizado el proceso de crear copias de seguridad
+                    y restaurar las particiones de los sistemas operativos del equipo.</p>
+                <p style="text-align: justify;">La utilidad de implantar este Sistema de Restauración de Particiones en
+                    un equipo, es que <strong>normalmente el tamaño del almacenamiento (disco/s duro/s) del equipo suele
+                        ser bastante mayor del necesario</strong> para contener el software del sistema operativo más
+                    las aplicaciones que se van a utilizar. Incluso cuando se plantee un arranque dual (Windows+ MAX, la
+                    distribución de linux de la comunidad de Madrid). El tamaño de los discos duros actualmente supera
+                    los 500GB, con lo que dejando 150GB para cada SO, todavía se dispone 200GB de espacio, que sería
+                    espacio más que suficiente para contener los archivos comprimidos de las imágenes de backup de las
+                    particiones de ambos sistemas operativos, en esos 200MB si creamos con ese espacio una partición de
+                    backup.</p>
+                <p style="text-align: justify;">Además para gestionar el SRP se puede utilizar una distribución de linux
+                    ligera que contenga las herramientas apropiadas para administrar el equipo y que precise poco
+                    espacio. En este esquema como se ha dicho se ha elegido SystemRescueCD, que precisa en sus versiones
+                    actuales menos de 2GB del almacenamiento.</p>
+                <p style="text-align: justify;">Aunque se puede usar para equipos personales, donde se puede obtener un
+                    mayor beneficio de este SRP es en las aulas de informática. Dichas aulas normalmente se componen de
+                    15 a 30 equipos idénticos, que se usan por los distintos grupos de alumnos y profesores y que no
+                    están destinados a contener datos de usuario. Conviene en esos equipos del aula mantener
+                    homogeneidad en aplicaciones y entornos de los SO en todos los equipos. Dado la diversidad de
+                    usuarios que pasa por cada equipo, no es infrecuente que pese a los esfuerzos del administrador del
+                    aula, de forma accidental o intencionada, algunos usuarios alteren dicha homogeneidad en algún
+                    equipo, llegando en algunos extremos a inutilizar el equipo para poder ser usado de forma normal. Es
+                    una tarea frecuente de los administradores, restaurar ese equipo, normalmente partiendo de la
+                    maqueta adecuada de esos equipos. Está claro que esa tarea se facilita si la maqueta del propio
+                    equipo está albergada en una partición de dicho equipo inaccesible a los usuarios normales . Aquí
+                    entra el SRP, pues arrancando en uno de los modos para administradores, se puede arrancar el proceso
+                    de restauración del SO dañado y en apenas unos minutos se tendría restaurado dicho equipo. Es más,
+                    si hubiera que llevar a cabo dicho proceso en varios equipos del aula, el proceso se puede llevar a
+                    cabo en paralelo de forma que apenas duraría algún minuto más que hacerlo en un solo equipo.</p>
+                <p style="text-align: justify;">Otro proceso en que disponer de SRP en los equipos del aula facilitaría
+                    el trabajo de los administradores del aula de informática, sería la tarea de actualizar los equipos
+                    al comienzo (o durante) del curso. Ese proceso se llevaría a cabo <strong>solamente en uno de los
+                        equipos</strong> asegurando que cada SO del equipo quede con todo su entorno actualizado y
+                    adecuado al uso que se presume tendrá a lo largo del curso. Una vez hecha la actualización del
+                    primer equipo (puede suponer un tiempo importante), el procedimiento eficaz (en lugar de pasar a
+                    hacer lo mismo en los deás equipos), sería hacer una copia de seguridad de las particiones afectadas
+                    con SRP, a continuación se hece llegar, a través de la red del aula (o dispositivos extraíbles), la
+                    copia al resto de los equipos (si es a través de la red se puede lanzar en paralelo en todos los
+                    equipos del aula), una vez un equipo ha recibido la imagen actualizada de las particiones, se lanza
+                    el proceso de restauración, y una vez completado se debe en cada SO del equipo corregir el nombre
+                    del equipo (ya que en las imágenes distribuida vendría el del equipo en el que se hizo la
+                    actualización), en este momentoys estaría actualizada el aula, no obstante para mantener actualizado
+                    el SRP en cada equipo se hace la copia de seguridad en cada equipo, para que quede la imagen de lo
+                    SO perfectamente adaptada incluido el nombre de equipo. Estos procesos se pueden lanzar en paralelo
+                    (o pipeline, se lanza un proceso largo en un equipo y a continuación mientras se lleva a cabo se
+                    inicia en el siguiente ... ) en todos los equipos del aula. De esta forma el proceso de
+                    actualización una vez realizado en el primero y obtenida la imagen llevaría: el tiempo de
+                    distribución de los archivos de la imagen (a considerar pues son archivos que suman varios
+                    GB)+tiempo de restauracion (a considerar en torno a 20') + tiempo de adaptar el tiempo de usuario
+                    (poco si se tienen preparados scripts que lo hagan) + tiempo de crear la copia de seguridad (a
+                    considerar en torno a 20'). Como todo eso se puede lanzar prácticamente en paralelo salvo la tarea
+                    de cambiar los nombres de equipos que habrá que ir de equipo en equipo y dependerá del numero de
+                    administradores presentes, pero al ser un proceso corto se puede hacer en los equipos que vayan
+                    acabando la restauración mientras los demás todavía no la han completado o están haciendo el
+                    siguiente procesos, es decir iría como un pipeline. Resumiendo con poco más de 1h se puede dejar
+                    toda el aula actualizada y además con la seguridad (al provenir de clonado del primer equipo
+                    actualizado) de que el software de todos los equipos es exactamente el mismo, incluso aunque solo
+                    haya habido una persona encargada de realizar dicho trabajo.</p>
+                <p style="text-align: justify;"></p>
+                <p style="text-align: justify;">Describimos a continuación las opciones de cada menú de las pantallas de
+                    arranque que mostraría el SRP.<span style="text-decoration: underline; font-size: 12pt;"></span></p>
+                <p style="text-align: justify;"><span style="text-decoration: underline; font-size: 14pt;">Menú
+                        principal</span></p>
+                <p style="text-align: justify;"><img src="./images/menu_principal.png" title="menu_principal.png"
+                        width="800" height="600" /></p>
+                <p style="text-align: justify;"></p>
+                <p style="text-align: justify;">Este es el menú principal que aparece siempre al encender el equipo.
+                    Permite seleccionar el sistema operativo en el que deseamos iniciar. Por defecto tiene una cuenta
+                    atrás tras la cual inicia el sistema operativo que tengamos seleccionado. También como se ve también
+                    da acceso a información y a las "opciones avanzadas", en que se puede configurar tanto el tiempo de
+                    la cuenta atrás para el arranque con SO por defecto, así como el sistema operativo que queramos que
+                    inicie por defecto y también el acceso a las tareas de mantenimiento para restaurar y crear copias
+                    de seguridad de los dos SO que son las que justifican la utilidad de este SRP.</p>
+                <p style="text-align: justify;">La opción "Información..." muestra una pantalla con información sobre la
+                    maqueta:</p>
+                <p style="text-align: justify;"><img src="./images/informacion.png" title="informacion.png" width="800"
+                        height="600" /></p>
+                <p style="text-align: justify;"></p>
+                <p style="text-align: justify;"> </p>
+                <p style="text-align: justify;"><span style="text-decoration: underline;"><span
+                            style="font-size: 14pt;">Menú de opciones avanzadas</span></span></p>
+                <p style="text-align: justify;"><span style="text-decoration: underline;"><span
+                            style="font-size: 14pt;"><img src="./images/opcionesAvanzadas.png"
+                                title="opcionesAvanzadas.png" width="800" height="600" /></span></span></p>
+                <p style="text-align: justify;"></p>
+                <p style="text-align: justify;">El acceso a este menú está bloqueado mediante usuario y contraseña. Los
+                    datos por defecto son para el usuario administrador normal "madrid" y contraseña "cmadrid" (como se
+                    dice en información conviene cambiar dicha contraseña), pero existe un superusuario con mayores
+                    permisos que por defecto se crearía con nombre de usuario "consejeria" y contraseña "cconsejeria",
+                    la contraseña en este superusuario se guarda encriptada. Se trata de que sólo el personal autorizado
+                    pueda realizar las labores de cambio de contraseña del usuario madrid, el SO de arranque por
+                    defecto, el tiempo de espera para arrancar el SO por defecto, restauración del equipo, creación de
+                    un backup del equipo o arrancar en la consola o entorno gráfico de SRP.</p>
+                <p style="text-align: justify;">La contraseña del usuario "madrid" se puede cambiar en uno de los menús
+                    de SRP en cualquier momento, pero la contraseña del superusuario "consejeria" no es modificable
+                    desde los menús normales de SRP. No obstante cuando se realice la instalación de acuerdo con el
+                    procedimiento que se describe, ambas contraseñas se pueden crear con valores diferentes de los
+                    indicados por defecto.</p>
+                <p style="text-align: justify;">- Ayuda...</p>
+                <p style="text-align: justify;">La opción "Ayuda..." contiene una breve descripción de los componentes
+                    de este menú:</p>
+                <p style="text-align: justify;"><img src="./images/ayuda.png" alt="" title="ayuda.png" width="800"
+                        height="600" /></p>
+                <p style="text-align: justify;">- Maqueta de fábrica</p>
+                <p style="text-align: justify;"><img src="./images/fabrica.png" alt="" title="fabrica.png" width="800"
+                        height="600" /></p>
+                <p style="text-align: justify;">Desde este menú solo podemos restaurar la partición de Windows, la de
+                    MAX o ambas y la partición de arranque EFI. La maqueta de fábrica sólo tiene la opción de restaurar.
+                </p>
+                <p style="text-align: justify;">Para tener backups de esta maqueta se partiría de haber obtenido backups
+                    de la maqueta personalizada y accediendo con alguna de las opciones "Iniciar Systen Rescue ...", se
+                    procedería a renombrar (o copiar) la carpeta "copia2" de la partición SRPBACKUP a "copia1", o bien
+                    copiar los archivos imagen de uno de los SO de "copia2" a "copia1".</p>
+                <p style="text-align: justify;">Esta maqueta de fábrica originalmente tenía como utilidad mantener el
+                    punto de partida de la maqueta con que la Consejería de Educación creaba los equipos, ya que venía
+                    creada cuando la Consejería de Educación hacía entrega de los equipos para el aula al centro
+                    educativo, y caso de que en el uso de la misma se hubieran producido alteraciones que el
+                    administrador del centro no pudiera resolver, sería personal de la consejería que se desplazara al
+                    centro, el que lo resolviera por el procedimiento estandar de restaurar la copia de fabrica usando
+                    el usuario "consejeria" (cuya contraseña solo conocía la Consejería de Educación) en pocos minutos
+                    volvería a dejar operativa el aula con el software con que la entregó.</p>
+                <p style="text-align: justify;">En esta actualización de SRP ya no tendría sentido dejar a "consejeria"
+                    con ese rol, sino que se ha planteado como un superusuario que realice las tareas menos frecuentes y
+                    más comprometidas como realizar los backups, cambiar la contraseña de "madrid", acceder en modo
+                    consola o gráfico a SRP. De esa forma dejar para que haya administradores con menor rango que
+                    accederían con el usuario "madrid" para que realizarían tareas más frecuentes como la restauración
+                    de la maqueta personalizada (la más actualizada) en un equipo que lo precisara.</p>
+                <p style="text-align: justify;">En la filosofía descrita en estas páginas, la maqueta de fabrica sería
+                    una maqueta personalizada que se ha visto que funciona de forma estable (esto solo se puede saber
+                    después de un tiempo de uso de los equipos), pasado ese tiempo, el superusuario consejería pasaría a
+                    considerar si conviene realizar el paso de convertirla en la nueva maqueta de fábrica. El
+                    procedimiento sería hacer una copia de los archivos de imagen de los SO de la carpeta "copia2" a la
+                    carpeta "copia1" eliminando esos los archivos viejos que hubiera en "copia1 . De esa manera se
+                    tendría como un punto de partida "de fabrica" la copia personalizada debidamente probada.</p>
+                <p style="text-align: justify;">Las copias personalizadas, por la manera de generarlas, inicialmente no
+                    tienen ningun tiempo de uso y prodría ser que tras usarlas un tiempo pudieran manifestar problemas
+                    que no se pudieran resolver. En ese desafortunado caso se podría deshechar la copia personalizada y
+                    realizar la actualización desde un punto de partida más probado que sería la copia de fábrica.</p>
+                <p style="text-align: justify;">Antes de restaurar una partición se avisa con un último menú para
+                    confirmar la acción:</p>
+                <p style="text-align: justify;"><img src="./images/restaurar.png" alt="" title="restaurar.png"
+                        width="800" height="600" /></p>
+                <p style="text-align: justify;">Al pulsar "Iniciar la restauración..." primero se carga el SystemRescue
+                    lo que lleva unos segundos, veremos los mensajes de carga en la pantalla:</p>
+                <p style="text-align: justify;"><img src="./images/arranque.png" alt="" title="arranque.png" width="800"
+                        height="600" /></p>
+                <p style="text-align: justify;">Al finalizar la carga se ejecuta el script correspondiente, en este caso
+                    restaurar la imagen. Al finalizar la tarea se muestra un mensaje de tarea terminada y a los 30
+                    segundos el equipo es reiniciado.</p>
+                <p style="text-align: justify;"> </p>
+                <p style="text-align: justify;">- Maqueta personalizada</p>
+                <p style="text-align: justify;"><img src="./images/personalizadaOK.png" alt=""
+                        title="personalizadaOK.png" width="800" height="600" /></p>
+                <p style="text-align: justify;">A diferencia de la maqueta de fábrica observamos que este menú sí nos
+                    permite generar los backups. Como se ve generar una copia personalizada se realiza mediante este
+                    menú, no obstante se ha dejado para el superusuario "consejeria", ya que se considera que establecer
+                    que estado de los SO es el conveniente, para que valga la pena conservarlo como imagen de respaldo
+                    incumbe al superadministrador, ya que cada vez que se genera un backup, los ficheros del backup
+                    anterior son eliminados.</p>
+                <p style="text-align: justify;">El tamaño de la partición del SRPBACKUP se debe dimensionar para que
+                    quede bastante espacio libre para generar una copia personalizada incluso después de haber metido la
+                    copia de fábrica (suelen ocupar más de 15GB por cada SO, es decir 30 por copia al ser dos: fábrica y
+                    personalizda se pasaria de 60GB), pero aún así es recomendable estar pendiente de que la tarea
+                    termine con éxito y no ha falla por espacio insuficiente.</p>
+                <p style="text-align: justify;">En ningún momento se debe pensar en este sistema como un sistema de
+                    backup para los datos de usuario. Por supuesto todo lo que se meta en las particiones de los
+                    sistemas operativos quedará grabado en estos backups, pero la idea es precisamente la contraria. Un
+                    backup del sistema operativo debe estar limpio de cualquier dato personal. Para realizar backups de
+                    datos personales se deben de utilizar otro tipo de herramientas para copiar exclusivamente lo que
+                    interesa.</p>
+                <p style="text-align: justify;">De hecho sería recomendable dirigir las carpetas de usuarios a otras
+                    particiones tanto en windows como en MAX (montar home en otra partición)</p>
+                <p style="text-align: justify;"> </p>
+                <p style="text-align: justify;"><strong>- Configurar sistema operativo por defecto</strong></p>
+                <p style="text-align: justify;">Permite seleccionar qué sistema operativo queremos que se inicie después
+                    de que termine la cuenta atrás en el menú principal.</p>
+                <p style="text-align: justify;"><img src="./images/cambiarSistemaPorDefecto.png" alt=""
+                        title="cambiarSistemaPorDefecto.png" width="966" height="546" /></p>
+                <p style="text-align: justify;"> </p>
+                <p style="text-align: justify;"><strong>- Configurar tiempo de inicio</strong></p>
+                <p style="text-align: justify;">Permite configurar el número de segundos antes de que se inicie el
+                    sistema operativo por defecto:</p>
+                <p style="text-align: justify;"><img src="./images/cambiar%20tiempo%20de%20espera.png" alt=""
+                        title="cambiar tiempo de espera.png" width="966" height="546" /></p>
+                <p style="text-align: justify;"> </p>
+                <p style="text-align: justify;"><strong>- Cambiar contraseña:</strong></p>
+                <p style="text-align: justify;">Permite cambiar la contraseña del usuario "madrid". La contraseña por
+                    defecto es "cmadrid" pero esta contraseña debe considerarse como temporal, el usuario final debería
+                    cambiarla cuanto antes, esta opción solo se puede hacer entrando con el superusuario "consejeria" y
+                    solo se puede cambiar la del usuario "madrid".</p>
+                <p style="text-align: justify;"><img src="./images/cambiarContrase%C3%B1a.png" alt=""
+                        title="cambiarContraseña.png" width="800" height="600" /></p>
+                <p style="text-align: justify;"><strong>- Iniciar System Rescue ...:</strong></p>
+                <p style="text-align: justify;">Esta dos opciones reservadas al superusuario "consejeria"
+                    <strong>(una</strong> con la consola de texto y la otra en modo gráfico con todas las particiones
+                    montadas en "/mnt" lo que nos facilitaría realizar las tareas que el "superusuario" se planteara al
+                    entrar.
+                </p>
+                <p style="text-align: justify;">Es necesaria para establecer la copia de fábrica a partir de backups de
+                    la copia personalizada, ya que no se estableció la opción dentro de un menú.</p>
+                <p style="text-align: justify;">Está claro que esta opción es tan potente que permite hacer
+                    prácticamente cualquier cosa alterando los menús de la carpeta SRPBACKUP/srp/menus entre las que
+                    estarían por no ser demasiado complejas:</p>
+                <ul style="text-align: justify;">
+                    <li>cambiar la contraseña encriptada del superusuario "consejeria", se puede dejar encriptada o
+                        incluso ponerla en plano como la de "madrid". (la de "madrid también se pueda cambiar aquí pero
+                        sería más fácil hacerlo en su menú correspondiente)</li>
+                    <li>cambiar el nombre del superusuario "consejería", (no así el nombre del usuario "madrid" que
+                        requiere cambios en más archivos para que funcione de forma correcta).</li>
+                </ul>
+                <p style="text-align: justify;">Para realizar estos cambios habría que editar con cuidado el archivo
+                    menuprincipal.cfg de la carpeta SRPBACKUP/srp/menus de acuerdo con el apartado "<a
+                        href="https://www.educa2.madrid.org/web/jgilpalacios/avanzado" target="_blank"
+                        rel="noopener">Avanzado</a>".</p>
+                <p style="text-align: justify;">Cualquier cambio que se haga si no es de forma cuidadosa al hacerse en
+                    archivos ejecutables de grub puede llevar a que el sistema deje de funcionar.</p>
+                <p style="text-align: justify;">Si se precisase editar archivos de la carpeta
+                    <strong>/mnt/SRP/autorun</strong>, se puede llevar a cabo <strong>también desde esta opción</strong>
+                    ya que el arranque se hace copiando los archivos de SystemRescueCD en la memoria de forma que queda
+                    escribible la particion SRP (opción copytoram), para el resto de los arranques: crear backups,
+                    restaurar etc, no se usa esta opción ya que ocupa parte de la RAM y se ejecuta más lentamente, lo
+                    que ha obligado a dividir la particion SRP del modelo original en dos SRP (no escribible) y
+                    SRPBACKUP (escribible) .
+                </p>
+            </div>
+            <div class="tab-page">
+                <h1 style="text-align: justify;">Instalación del SRP</h1>
+                <h3 style="text-align: justify;">Introducción</h3>
+                <p><iframe width="850" height="420" style="border: 0; overflow: hidden;"
+                        src="https://mediateca.educa.madrid.org/lista/L6pmiexlzhfidu5id/fs" frameborder="0"
+                        scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                <p style="text-align: right;"><span style="font-size: 8pt;">Lista de videos en que se implementa la
+                        instalación de este sistema en un equipo con un disco con windows11 instalado.</span></p>
+                <p style="text-align: justify;">Este documento explica como instalar el Sistema de Restauración de
+                    Particiones (SRP) en un equipo con arranque UEFI, aunque tambien esta adaptado para poder instalarlo
+                    en equipos antiguos con arranque LEGACY en sustitución de la versión anterior que se puede obtener
+                    de la página <a href="https://www.educa2.madrid.org/web/roberto.mengibar/home" target="_blank"
+                        rel="noopener">Roberto Mengíbar.</a> En esta versión antigua de la págna de Roberto habría que
+                    disponer de versiones antiguas de System Rescue CD anteriores a la 5 que ya no estan disponibles en
+                    la página de descarga.</p>
+                <p style="text-align: justify;">Los scripts del SRP se han diseñado a partir del los scripts, que la
+                    Comunidad de Madrid diseñó para una distribución de particiones muy concreta que se utilizó en la
+                    elaboración de algunas de las maquetas de la Comunidad de Madrid. Estos equipos llevan arranque dual
+                    lo que permite iniciarlos en Windows o MAX (la distribución linux de la Comunidad de Madrid).</p>
+                <p style="text-align: justify;">El SRP de partida que se obtuvo de la página de <a
+                        href="https://www.educa2.madrid.org/web/roberto.mengibar/instalacion" target="_blank"
+                        rel="noopener">Roberto Mengíbar </a>estaba configurado por defecto para trabajar con una
+                    distribución de particiones muy concreta. Si la distribución de particiones que resultase en el
+                    equipo fuese diferente era necesario modificar los menús de Grub (en carpeta de srp menús ) o
+                    adaptar algún script (en carpeta autorun) o ambas cosas.</p>
+                <p style="text-align: justify;">Viendo la forma de adaptar al arranque UEFI con las nuevas versiones de
+                    System Rescue CD (a partir de la 9.06), para la versión de windows actual (11) y para tabla de
+                    particiones de disco GPT. Se encuentra que se va a precisar de un sistema diferente, más flexible y
+                    que nos evite tener que hacer cambios en los menús y/o scripts en muchas de las configuraciones.
+                    Alterar los menus de grub o los scripts de consola de linux tiene dificultad y riesgo de cometer
+                    errores por la complejidad de dichos lenguajes, y aun teniendo conocimientos las consecuencias de un
+                    error es que el sistema quede sin posibilidad de arrancar por si mismo.</p>
+                <p style="text-align: justify;">Estos condicionamientes se hacen que un archivo fijo de configuración
+                    similar al de la página de Roberto no sea práctico se pueden resumir en:</p>
+                <ol style="text-align: justify;">
+                    <li style="text-align: justify;">En arranque UEFI se precisa de una partición del disco sda para
+                        gestionar el arranque, la partición EFI que no se contemplaba en la versión de Roberto y ademas
+                        no siempre es sda1.</li>
+                    <li style="text-align: justify;">En GPT se pueden crear más de 4 particiones primarias, por lo que
+                        no es necesario manejar particiones extendidas.</li>
+                    <li style="text-align: justify;">Es posible que en algunas aulas se disponga de equipos con más de
+                        dos discos duros, uno más rápido que será el primario y otro secundario. En ese caso lo
+                        conveniente es reservar el primero para los sistemas operativos windows, MAX y SRP; y el
+                        secundario lo reservaríamos para los datos de usuario y la partición con las copias de seguridad
+                        (SRPBACKUP).</li>
+                    <li style="text-align: justify;">Las versiones de System Rescue CD a partir de la 9.06 montan de
+                        solo lectura la partición en la que se hace la copia de los archivos de CD (o de la usb
+                        arrancable), por lo que el sistema original no funcionaría ya que precisa copiar las copias de
+                        seguridad y modificar algunos menús y scripts. Es por eso que en lugar de una sola partición se
+                        ha optado por utilizar dos: una que contenga las copia de los archivos de System Rescue CD y los
+                        scripts de autorun, que no se modifica nunca y con 2GB es suficiente en este momento; y otra que
+                        contenga los archivos de arranque de grub, los menús de grub y que deberá tener el tamaño
+                        suficiente para que quepan también las copias de seguridad que generemos. en la situación actual
+                        es posible que se precisen entre 100 y 200 GB.</li>
+                    <li style="text-align: justify;">Windows 11 genera un numero de particiones del sistema diferente al
+                        versiones anteriores. Genera una pequeña partición de sistema de archivos desconocido para
+                        Gparted con etiqueta "Microsoft reserved partition" (sde3 de 128MB y sdf2 de 16MB en las
+                        imágenes que siguen), que no es necesario gestionar en las copias de seguridad. Admás genera
+                        otras que sí que debemos contemplar para las copias de seguridad que son la que corresponde al
+                        disco C: de windows que tiene un gran tamaño (sde4 y sdf3) y<strong> una o dos particiones de
+                            recuperación</strong> (dos: sde1 y sde5; y una: en sdf4 en la imagen que sigue). Es decir
+                        que el numero de particiones de windows que debemos contenplar no es siempre 2 como en el modelo
+                        de Roberto, sino que de forma aleatoria nos encontraremos con 3 o 2 (como en las imágenes).
+                        Además los números que les asign pueden veariar, y también el número asignado la partición EFI
+                        sistema de archivos fat32 puede no ser siempre la misma (sde2 y sdf1 en las imágenes).</li>
+                </ol>
+                <p style="text-align: justify;"><img src="./images/23Particiones.png" alt="" title="23Particiones.png"
+                        width="966" height="226" /></p>
+                <p style="text-align: justify;"><span style="font-size: 8pt;">(en la imagen se han conectado ambos
+                        discos a un equipo con varios por eso la letra de disco es 'e' y 'f', en un situación normal el
+                        equipo tendría normalmente un solo disco y sería ambas situaciones 'sda')</span></p>
+                <p style="text-align: justify;">Por todo lo expresado anteriormente<strong> no se ha considerado
+                        práctico crear un archivo zip con el contenido de los archivos de configuración</strong>
+                    <strong>de menús y script fijo</strong> del estilo del srp.zip que se puede descargar de la página
+                    de Roberto, sino que se ha considerado más práctico crear una página web con un entorno gráfico que,
+                    de acuerdo a la configuración de particiones del disco de nuestro equipo, haga la selección de las
+                    opciones correspondiente en dicha página y una vez completada y comprobada la configuración,
+                    pulsando en descargar el archivo se obtenga el srp.zip ajustado a la configuración de particionse de
+                    nuestro disco/s.
+                </p>
+                <p style="text-align: justify;">Teniendo en cuenta que las versiones modernas de System Rescue CD no son
+                    compatibles con el esquema de menús y particiones que configura la página de Roberto Mengíbar, dado
+                    que el esquema propuesto es lo suficiente flexible, permite configura para que también nos genere el
+                    SRP para <strong>equipos antiguos</strong> que solo tengan<strong> arranque LEGACY que funcionarian
+                        con versione modernas de System Rescue CD. P</strong>ara estos equipos <strong>basta con
+                        desmarcar la casilla de la partición EFI</strong> en la aplicación que se propone a continuación
+                    y configurar el resto con las particiones del disco del equipo.</p>
+                <p style="text-align: justify;">La página para configurar nuestro esquema de particiones y
+                    <strong>obtener un srp.zip personalizado</strong> es:
+                </p>
+                <ul style="text-align: justify;">
+                    <li><span style="font-size: 14pt;"><a href="https://jgilpalacios.neocities.org/SRP/" target="_blank"
+                                rel="noopener">https://jgilpalacios.neocities.org/SRP/</a></span></li>
+                    <li><a href="https://www.educa2.madrid.org/web/educamadrid/principal/files/e3b62387-4d27-44aa-a0ff-d6c5cc55f57f/SRP/Gestor%20de%20Particiones.html?t=1741867759675"
+                            target="_blank" rel="noopener"><span style="font-size: 14pt;">Enlace alternativo</span></a>
+                    </li>
+                </ul>
+                <p style="text-align: justify;"></p>
+                <h3 style="text-align: justify;">Procedimiento</h3>
+                <p style="text-align: justify;">PRECAUCIÓN</p>
+                <p style="text-align: justify;">Estos procesos llevan a cabo modificaciones en las particiones de los
+                    discos del equipo que pueden ocasionar la perdida irreversible de información. Es por tanto muy
+                    recomendable tener copias de seguridad de dicha información, lo más práctico para ello es realizar
+                    un clonado del disco con la instalación de windows para lo cual una herramienta libre muy
+                    recomendable es<a href="https://clonezilla.org/downloads.php" target="_blank" rel="noopener">
+                        clonezilla.</a></p>
+                <p style="text-align: justify;">Windows 11 encripta sus particiones utilizando bitlocker, es necesario
+                    para poder instalar el sistema SRP desactivar bitlocker y conviene realizar el clonado después de
+                    desactivar bitlocker. (Si se intenta antes de desactivar bitlocker es posible que falle clonezilla o
+                    se precise de un espacio de almacenamiento mucho mayor)</p>
+                <p style="text-align: justify;">Es muy recomendable simular el proceso antes de llevarlo a cabo sobre el
+                    equipo físico de forma que tengamos probados los pasos a dar previamente. Para poder simular el
+                    proceso se puede utilizar un sistema de virtualizacion. Uno gratuito que se ha utilizado pare
+                    adaptar el SRP y que se recomienda es <a href="https://www.virtualbox.org/" target="_blank"
+                        rel="noopener">Oracle VirtualBox</a>. Para partir de un disco con una maquina virtual que
+                    contenga windows11 se puede obtener el software necesario de la <a
+                        href="https://developer.microsoft.com/es-es/windows/downloads/virtual-machines/" target="_blank"
+                        rel="noopener">página oficial de Microsoft</a>.</p>
+                <p style="text-align: justify;">PASO 1:</p>
+                <p style="text-align: justify;">Obtener el iso de sofware <a
+                        href="https://www.system-rescue.org/Download/" target="_blank" rel="noopener">System Rescue
+                        CD</a> en versiones más recientes que la 9.06 y generar un DVD o bien un usb arrancable para lo
+                    cual se pueden utilizar diversas herramientas: <a href="https://rufus.ie/es/" target="_blank"
+                        rel="noopener">Rufus</a>, <a href="https://etcher.balena.io/" target="_blank"
+                        rel="noopener">Balenaetcher</a>, <a href="https://www.ventoy.net/en/index.html" target="_blank"
+                        rel="noopener">Ventoy</a> etc.</p>
+                <p style="text-align: justify;">PASO 2:</p>
+                <p style="text-align: justify;">Desactivar bitlocker en el windows del equipo en que vamos a implantar
+                    el SRP y desactivar secure boot.</p>
+                <p style="text-align: justify;"><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                        src="https://mediateca.educa.madrid.org/video/g9pcrt1ggfbs4ev4/fs" frameborder="0"
+                        scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                <p style="text-align: justify;"><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                        src="https://mediateca.educa.madrid.org/video/beqhybiml94ieky8/fs" frameborder="0"
+                        scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                <p style="text-align: justify;">PASO 3:</p>
+                <p style="text-align: justify;">Arrancar con el DVD o usb arrancable de System Rescue, para lo cual en
+                    el encendido del equipo es muy posible que tengamos que entrar en la bios para alterar el orden del
+                    dispositivo de arranque o bien indicar directamente dicho dispositivo, para lo cual al encender el
+                    equipo antes de que comience a arrancar windows, se debe pulsar repetidamente una tecla normalmente
+                    (escape, supr, f2 o f12 ...). La tecla a usar dependerá de la bios de equipo.</p>
+                <p style="text-align: justify;">Al iniciar el arranque con Sytem Rescue aparece un menú con varias
+                    opciones, la primera se seleccionada por defecto nos sirve, por lo que pusamos intro y comienza el
+                    arranque.</p>
+                <p style="text-align: justify;">System Rescue es un sistema basado en linux y arranca en modo texto,
+                    cuando se completa el arranque nos muestra una consola con cierta información de interés y un prompt
+                    para que tecleemos las órdenes precisemos. con el aspecto que sigue:</p>
+                <p style="text-align: justify;"><img src="./images/texto.png?" alt="" title="texto.png" width="640"
+                        height="480" /></p>
+                <p style="text-align: justify;">Es conveniente que pongamos el teclado español con la órden:
+                    <strong>setkmap es</strong>, para tener el teclado español, y a continuación arranquemos una sesión
+                    gráfica con la orden: <strong>startx</strong> el aspecto del entorno gráfico es:
+                </p>
+                <p style="text-align: justify;"><img src="./images/grafico.png" alt="" title="grafico.png" width="640"
+                        height="480" /></p>
+                <p style="text-align: justify;">En la barra de abajo vemos el <strong>botón de inicio</strong> que nos
+                    da acceso a todo incluido el apagado del ordenador y a continuación tenemos los iconos que arrancan:
+                    una terminal de texto, <strong>Mozilla Firefox</strong>,<strong> Gparted</strong>, y un editor de
+                    texto.</p>
+                <p style="text-align: justify;">Para los pasos siguientes vamos a utilizar gparted y Firefox.</p>
+                <p style="text-align: justify;">PASO 4:</p>
+                <p style="text-align: justify;">Abrimos gparted y modificamos las particiones del disco con windows 11
+                    una posible situación de partida sería:</p>
+                <p style="text-align: justify;"><img src="./images/antes1.png" alt="" title="antes1.png" width="786"
+                        height="228" /></p>
+                <p style="text-align: justify;">Vemos que windows tiene dos particiones que debamos considerar, las dos
+                    con file system: NTFS que son sda3 que es de gran tamaño y correspondería con el disco C: de windows
+                    y la pequeña "reservado para el sistema" sda4.</p>
+                <p style="text-align: justify;">Es de la grande sda3 de la que debemos sacar espacio para: la partición
+                    de MAX, la swap (si queremos usarla), SRP y SRPBACKUP.</p>
+                <p style="text-align: justify;">Para sacar el espacio necesario, se selecciona sda3 y en el menú
+                    particion seleccionamos "resize/move" y reducimos por su final (los datos de windows estan al
+                    principio y aparecen sombreados) hasta que dejando suficiente espacio para windows nos genere un
+                    espacio libre suficiente para las particiones: MAX, swap (es opcional), SRP (con 2GB es suficiente),
+                    SRPBACKUP:</p>
+                <p style="text-align: justify;"><img src="./images/despues1.png" alt="" title="despues1.png" width="787"
+                        height="252" /></p>
+                <p style="text-align: justify;">Para crear en el espacio libre creado "unalocated", se pincha en dicho
+                    espacio y en el menú partición se selecciona: "New", se despliega un menú que nos permite
+                    seleccionar: tamaño, filesystem, y label. para MAX, SRP y SRPBACKUP. Serían el tamaños adecuado a
+                    cada una: MAX por encima de 20GB, SRP 2GB y SRPBACUP entre 100 y 200 GB. Las label que hemos
+                    indicado y filesystem de las tres ext4. opcionalmente se puede crear una particion swap filesystem
+                    linux-swap y tamaño en funcion de la memoria de nuestro equipo (puede ser en torno a 4GB). Una
+                    posible solución sería:</p>
+                <p style="text-align: justify;"><img src="./images/final.png" alt="" title="final.png" width="966"
+                        height="507" /></p>
+                <p style="text-align: justify;">En que se puede ver que las particiones creadas han sido:</p>
+                <p style="text-align: justify;"><strong>sda5</strong> MAX con filesystem: ext4; <strong>sda6</strong>
+                    (aprox. 4GB) filesystem: linux-swap ; <strong>sda7</strong> SRP (aprox 2GB) filesystem ext4;
+                    <strong>sda8</strong> SRPBACKUP filesystem: ext4; y aunque no se gestionará con el sistema SRP pues
+                    sería para datos de usuario, se ha creado una particion para DATOS en sda9 con filesystem ntfs que
+                    equivaldría al disco D: de windows.
+                </p>
+                <p style="text-align: justify;">Una vez creadas las nuevas particiones que precisemos con sus tamaños
+                    adecuados, pasamos a confirmar que gparted guarde los cambios pulsando en el símbolo verde de OK de
+                    los menús ( <em><span style="color: #339966;"><strong><span style="font-size: 12pt;">√
+                                </span></strong></span></em>), con lo que se realizarán los cambios en el disco (si no
+                    se pulsa y salimos de gparted nos avisará de que hay cambios por realizar, si confirmamos la salida
+                    <strong>no se realizaría ningún cambio en el disco</strong>).
+                </p>
+                <p style="text-align: justify;"><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                        src="https://mediateca.educa.madrid.org/video/ftelew9kz3ittszk/fs" frameborder="0"
+                        scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                <p style="text-align: justify;">PASO 5:</p>
+                <p style="text-align: justify;">Una vez tenemos particionado el disco como hemos indicado (o como
+                    conviniera a nuestro caso) pasamos a generar el srp.zip adecuado a nuestro particionado del disco,
+                    para lo cual, dentro del entorno gráfico abrimos, Mozilla Firefox y accedemos a la página:</p>
+                <ul style="text-align: justify;">
+                    <li style="text-align: justify;"><span style="font-size: 14pt;"><a
+                                href="https://jgilpalacios.neocities.org/SRP/" target="_blank"
+                                rel="noopener">https://jgilpalacios.neocities.org/SRP/</a></span></li>
+                    <li style="text-align: justify;"><a
+                            href="https://www.educa2.madrid.org/web/educamadrid/principal/files/e3b62387-4d27-44aa-a0ff-d6c5cc55f57f/SRP/Gestor%20de%20Particiones.html?t=1741867759675"
+                            target="_blank" rel="noopener"><span style="font-size: 14pt;">Enlace alternativo.</span></a>
+                    </li>
+                </ul>
+                <p style="text-align: justify;"><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                        src="https://mediateca.educa.madrid.org/video/6hqkpnwd18ofnosc/fs" frameborder="0"
+                        scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                <p style="text-align: justify;">Aparece un entorno que nos permite configurar el entorno SRP para
+                    nuestras necesidades de número de discos y las particiones concretas, así como las contraseñas
+                    iniciales de los dos usuarios que permite gestionar las opciones avanzadas de los menús, para el
+                    esquema que hemos generado con gparted seria:</p>
+                <p style="text-align: justify;">Número de discos 1 y en la pestaña EFI se seleccionaría sda1 como para
+                    la particion efi filesystem fat32 que quedó con gparted, (en un disco con arranque Legacy no exite
+                    EFI y para indicarlo desmarcariamos la casilla de chequeo, al estar desmarcada no se tiene en cuenta
+                    el disco y particion de sus desplegables), en nuestro caso sería sda1 :</p>
+                <p style="text-align: justify;"><img src="./images/EFI.png" alt="" title="EFI.png" width="473"
+                        height="252" /></p>
+                <p style="text-align: justify;">Para la pestaña SRP, dejariamos sda7 para SRP y sda8 para SRPBACKUP como
+                    quedo con gparted también se configurarían las contrseñas de los usuarios "madrid y consejería", si
+                    no se cambian quedarían las de por defcto "cmadrid y cconsejeria" respectivamente:</p>
+                <p style="text-align: justify;"><img src="./images/SRP.png" alt="" title="SRP.png" width="876"
+                        height="363" /></p>
+                <p style="text-align: justify;">En la pestaña WINDOWS pondríamos para la particionWIN (la grande que
+                    equvale al disco C:) sda3 y para particionRES sda4 (particionRES2 en este caso no se usa ya que solo
+                    salieron dos particiones a tratar en el disco original de windows, por eso no la marcamos y da igual
+                    el valor del desplegable sda4 que muestra ya que no se usa al desmarcar la casilla de chequeo).</p>
+                <p style="text-align: justify;"><img src="./images/win.png" alt="" title="win.png" width="417"
+                        height="287" /></p>
+                <p style="text-align: justify;">En la pestaña MAX se selecciona sda5 para MAX y sda6 para SWAP (esta
+                    puede no usarse si no se crea la particion swap, bastaría con desmarcar la casilla).</p>
+                <p style="text-align: justify;"><img src="./images/max.png" alt="" title="max.png" width="405"
+                        height="261" /></p>
+                <p style="text-align: justify;">Como ya tenemos configuradas las pestañas con los valores que dejamos en
+                    gparted, pulsamos en el botón 'comprobación' para ver que no tengamos ningún error en alguna de las
+                    pestañas y si sale correcta la configuración pulsando en el botón 'Descargar SRP.ZIP' se descagará
+                    el archivo srp.zip, adaptado a nuestra configuración, que nos permitirá instalar SRP en nuestro
+                    equipo.</p>
+                <p style="text-align: justify;">PASO 6:</p>
+                <p style="text-align: justify;">Desde Mozilla Firefox podemos acceder al fichero srp.zip que se habrá
+                    descargado en "/root/Downloads", hacemos dblclick en el archivo y se abrirá una ventana en en
+                    descompresor, seleccionamos en el icono para extraer (en la ventana o menú "Action/Estract") y en la
+                    ventana que se abre navegar en "Estract to:" se despliega otra ventana en que pulsamos el icono
+                    "Desktop" (/root/Desktop) y a continuacion el boton "open", "/root/Desktop" aparecerá en en "Estract
+                    to:" y al extraer aparcera la carpeta srp carpeta en el escritorio.</p>
+                <p style="text-align: justify;"><img src="./images/extract.png" alt="" title="extract.png" width="966"
+                        height="357" /></p>
+                <p style="text-align: justify;">Dentro de srp del escritorio tenemos cuatro carpetas: 'autorun', 'boot',
+                    'herramientas' y 'srp'. Para realizar las tareas que nos faltan lo más conveniente es abrir la
+                    carpeta 'herramientas' y en el caso de tener arranque UEFI, (en Legacy solo serán tres y cambiará
+                    algún nombre y función) apareceran cuatro archivos: configuracion.txt, creaEntradaGrubEFI.sh,
+                    MontaEFI_SRPBACKUP_SRP.sh y PonerPrimeraLaEntradaSRPenEFI.sh los tres ulltimos son archivos con
+                    ordenes para consola de linux.</p>
+                <p style="text-align: justify;">Son archivos de texto con las ordenes agrupadas en formato bash, es
+                    decir si los abrimos con el editor de testos podemos ver las ordenes individuales y entender el
+                    funcionamiento .</p>
+                <ul style="text-align: justify;">
+                    <li style="text-align: justify;">configuracion.txt contiene la configuración con que hemos creado
+                        srp.zip comoviene que lo guardemos en alguno sitio, ya que las particiones se podrían volvera
+                        consultar con gparted pero tambien guarda las contraseñas que hemos puesto para madrid y
+                        consejería conveniente por tanto para recordarlas si no hemos dejad las que pone por defecto.
+                    </li>
+                    <li style="text-align: justify;">MontaEFI_SRPBACKUP_SRP.sh, como su nombre indica nos monta las
+                        particiones de EFI(sda1), SRPBACKUP(sda8) y SRP(sda7) en las carpetas /mnt/EFI, /mnt/SRPBACKUP y
+                        /mnt/SRP respectivamente, si tras ejecutarla navegamos a esas carptas veremos que /mnt/SRPBACKUP
+                        y /mnt/SRP estarán vacías en cambio /mnt/EFI contedrá algunos archivos y carpetas ya que tendrá
+                        configurado el arranque de windows.</li>
+                    <li style="text-align: justify;">creaEntradaGrubEFI.sh, se encarga de añadir en EFI los archivos y
+                        carpetas necesarios para que arranque el sistema SRP, en la carpeta /mnt/EFI/EFI aparecerá
+                        además de la entrada "Microsoft" que ya estaba una entrada "SRP" que es la que habilita este
+                        arranque, también creará en el firmware de arranque EFI del ordenador una entrada para SRP que
+                        se puede comprobar al escribir en una terminal la orden "efibootmgr", y en SRPBACKUP, antes
+                        vacía, la carpeta "boot" y su contenido.</li>
+                    <li style="text-align: justify;">PonerPrimeraLaEntradaSRPenEFI.sh se encarga de colocar como primera
+                        entrada SRP en el menú de arranque UEFI, si no estuviera la primera en el orden por defecto
+                        arrancaría con otra entrada y no es lo que queremos, comprobar si el la primera opción se puede
+                        hacer con la orden "efibootmgr", en la salida, dentro del apartado bootorder, aparece una lista
+                        de numeros separados por comas, hay que ver que el primer numero corresponde con la entrada cuya
+                        etiqueta sea SRP en el resto de la salida que coomienzan por los numeros. Si no estuviera la
+                        primera ejecutando este archivo se pondria en primer lugar.</li>
+                </ul>
+                <p style="text-align: justify;">Para poder ejecutar estos archivos se deben poner como ejecutables para
+                    lo cua,l si hacemos click con el boton derecho sobre el archivo se despiega un menú que en la opción
+                    "Properties..." despliega una ventana que en la pestaña: "Permissions" permite chekar "Allow this
+                    file to run as a program":</p>
+                <p style="text-align: justify;"><img src="./images/properties.png" alt="" title="properties.png"
+                        width="966" height="392" /></p>
+                <p style="text-align: justify;">Una vez puestos como ejecutables los tres archivos "...sh", podremos
+                    ejecutarlos abriendo un terminal en la carpeta herramientas, pulsando el boton derecho en un espacio
+                    vacío de dicha carpeta y seleccionando "Open terminal here", se abrira una terminal en esta carpeta
+                    que si en la terminal ejecuamos el comando 'ls' nos listará los archivos y carpetas que contiene,
+                    veremos que los archivos que no checamos como ejecutables aparecen en blanco en el listado y los que
+                    sí aparecerán en verde (los directorios aparecen en azul):</p>
+                <p style="text-align: justify;"><img src="./images/terminal.png" alt="" title="terminal.png" width="886"
+                        height="471" /></p>
+                <p style="text-align: justify;"></p>
+                <p style="text-align: justify;">Queda pues ejecutar los archivos .sh para lo cual en el prompt # se
+                    escribe ./&lt;nombre&gt;.sh, donde &lt;nombre&gt; es el nombre del archivo correspondiente con (./
+                    indicamos que el archivo en cuestion está en este directorio). El orden en que debemos ejecutarlos
+                    es:</p>
+                <ol style="text-align: justify;">
+                    <li># ./MontaEFI_SRPBACKUP_SRP.sh que monta las particiones en /mnt/ de forma que sean accesibles al
+                        siguiente comando.</li>
+                    <li># ./ creaEntradaGrubEFI.sh para que instale SRP como opción de arranque creando los archivos
+                        necesarios en las particiones EFI y SRPBACKUP</li>
+                    <li># ./PonerPrimeraLaEntradaSRPenEFI.sh que coloca la entrada SRP como primera opcion en el
+                        arranque UEFI.</li>
+                </ol>
+                <p style="text-align: justify;"><img src="./images/ejecucion.png" alt="" title="ejecucion.png"
+                        width="671" height="150" /></p>
+                <p style="text-align: justify;">Queda solo copiar el contenido del DVD o usb arrancable de System Rescue
+                    CD a la partición montada en /mnt/SRP y pasar los menus, scripts y configuración de arranque que
+                    están en las carpetas que obtuvimos al descomprimir a las carpetas que indicaremos.</p>
+                <p style="text-align: justify;">Comenzamos por la copia de los archivos de System Rescue CD: lo primero
+                    es que necesitamos es saber en qué disco y partición se ha asignado al DVD o usb para lo que
+                    ejecutaremos el comando: <strong>blkid</strong> , que nos listará todas las particiones de discos,
+                    CD, DVD o usb conectadas, sabremos cual corresponde al DVD o usb por que las que ya sabemos van des
+                    sda1 a sda9 que configuramos con gparted, el usb es probable que fuese sdb1, en nuestro caso es con
+                    DVD que aparece como sr0:</p>
+                <p style="text-align: justify;"><img src="./images/blkid.png" alt="" title="blkid.png" width="675"
+                        height="471" /></p>
+                <p style="text-align: justify;">Una vez tenemos ese dato procedemos a crear una carpeta con el cualquier
+                    nombre por ejemplo "cd" dentro de la carpeta /mnt/ y procedemos a montarla en la consola tecleando
+                    el comando:<strong> mount /dev/sr0 /mnt/cd</strong></p>
+                <p style="text-align: justify;">En ese momento la carpeta /mnt/cd contiene los archivos del DVD,
+                    entramos en ella seleccionamos todas sus carpetas y las llevamos a la carpeta /mnt/SRP con lo que se
+                    copiara el contenido completo del CD a dicha partición.</p>
+                <p style="text-align: justify;">En /mnt/SRP tendremos ahora, entre otras, la carpeta autorun pero estará
+                    vacía, la llenaremos llevando a /mnt/SRP la carpeta autorun que tenemos dentro de la carpeta srp del
+                    escritorio (obtenida al descoprimir srp.zip).</p>
+                <p style="text-align: justify;">De la misma forma copiamos a /mnt/SRPBACKUP las carpetas que hay dentro
+                    de la carpeta srp del escrtorio a saber: srp, boot, herramientas y autorun. (realmente solo
+                    <em>sería extrictamente necesario copiar srp y boot</em> pero hemos visto que contiene scripts que
+                    pueden se necesarios en otras ocasiones y autorun sería una copia de seguridad de la copia que
+                    hicimos en SRP, ya que al apagar todo lo que tenemos en escritorio o en mnt se desmonta y desaparece
+                    y solo quedaría permanente lo que hemos colocado en SRPBACKUP)(el contenido de boot se añadiría a lo
+                    que creó en su momento el script que crea la entrada SRP en EFI).
+                </p>
+                <p style="text-align: justify;">Esto último ya completa la instalación. Reiniciamos el sistema y
+                    entraremos en los menus que nos permite arrancar cualquiera de los dos SO que tenemos instalados en
+                    arranque dual y entrar en las opciones de administración.</p>
+            </div>
+            <div class="tab-page">
+                <div class="tabs">
+                    <div class="tab-menu">
+                        <button>Avanzado</button>
+                        <button>Particionado automático de equipos iguales con windows</button>
+                    </div>
+                    <div class="tab-content">
+                        <div class="tab-page">
+                            <p style="text-align: justify;">Como ya se comentó los menus y acciones de este SRP se
+                                configuran mediante un conjuto de scripts para grub y un conjunto de scripts bash que se
+                                guardan en la carpetas:</p>
+                            <ul style="text-align: justify;">
+                                <li>autorun</li>
+                                <li>srp/menus</li>
+                            </ul>
+                            <p style="text-align: justify;">que se obtiene al descomprimir el srp.zip obtenido con
+                                nuestra configuración.</p>
+                            <p style="text-align: justify;">Los fondos de pantalla que se muestran en los distintos
+                                menús consisten en imágenes png, se encuentra en la carpeta del antedicho srp.zip:</p>
+                            <ul style="text-align: justify;">
+                                <li>srp/fondos</li>
+                            </ul>
+                            <p style="text-align: justify;">En cuanto a los menús de grub, el archivo en el que si
+                                hacemos una edición cuidadosa va a permitir facilmente cambiar algún parámetro no
+                                contemplado (y otros contemplados) en los distintos menús es:</p>
+                            <ul style="text-align: justify;">
+                                <li>menuprincipal.cfg</li>
+                            </ul>
+                            <p style="text-align: justify;">editando con un editor de texto dicho archivo podemos
+                                cambiar de forma fácil:</p>
+                            <ol style="text-align: justify;">
+                                <li>nombre de usuario y contraseña del usuario madrid;</li>
+                                <li>nombre de usuario y contraseña del usuario consejeria;</li>
+                                <li>la información que se muestra en la opción "Información ..." del menú de entrada.
+                                </li>
+                            </ol>
+                            <p><em>En el video que sigue se muestran de forma práctica varias de estas tareas, que se
+                                    describen a continuación.</em></p>
+                            <p><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                                    src="https://mediateca.educa.madrid.org/video/3ysupx8ve65on8zg/fs" frameborder="0"
+                                    scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                            <p style="text-align: justify;">1) <strong>Cambio de usuario y contraseña del usuario
+                                    "madrid":</strong></p>
+                            <p style="padding-left: 30px; text-align: justify;">Es importante recordar que tanto para el
+                                nombre de usuario y la contraseña solo se deben usar letras corrientes y números no
+                                sirven caracteres especiales, espacios, signos de puntuación, letras acentuadas, la ñ
+                                etc.</p>
+                            <p style="padding-left: 30px; text-align: justify;">La linea 39 del archivo
+                                'menuprincipal.cfg' contiene el texto literal de la linea siguiente:</p>
+                            <p style="padding-left: 30px; text-align: justify;"><em>password madrid cmadrid</em></p>
+                            <p style="padding-left: 30px; text-align: justify;">si por ejemplo queremos que el usuario
+                                'madrid' pase a llamarse gestor y la contraseña 'cmadrid' pase a ser 'mipass', esa linea
+                                quedaría escrita así:</p>
+                            <p style="padding-left: 30px; text-align: justify;"><em>password gestor mipass</em></p>
+                            <p style="padding-left: 30px; text-align: justify;">En la línea 81, al final del archivo que
+                                figuraría de esta forma:</p>
+                            <p style="padding-left: 30px; text-align: justify;"><em>menuentry "Opciones avanzadas..."
+                                    --users "madrid" {</em></p>
+                            <p style="padding-left: 30px; text-align: justify;">Dado que 'madrid' ha pasado a ser
+                                gestor, deberíamos cambiarla de la forma siguiente:</p>
+                            <p style="padding-left: 30px; text-align: justify;"><em>menuentry "Opciones avanzadas..."
+                                    --users "gestor" {</em></p>
+                            <p style="padding-left: 30px; text-align: justify;">De esta forma habríamos completado los
+                                cambios necesarios, esto se podría haber hecho al implantar SRP incluyendo el archivo
+                                modificado o bien a posteriori entrando con la opcion avanzada de arrancar con System
+                                Rescue CD.</p>
+                            <p style="text-align: justify;"><strong>2) Cambio de usuario y contraseña del usuario
+                                    "consejeria":</strong></p>
+                            <p style="padding-left: 30px; text-align: justify;">Es importante recordar que tanto para el
+                                nombre de usuario y la contraseña solo se deben usar letras corrientes y números no
+                                sirven caracteres especiales, espacios, signos de puntuación, letras acentuadas, la ñ
+                                etc.</p>
+                            <p style="padding-left: 30px; text-align: justify;">La linea 37 del archivo
+                                'menuprincipal.cfg' contiene el texto literal de la linea siguiente:</p>
+                            <p style="padding-left: 30px; text-align: justify;"><em>set superusers="consejeria"</em></p>
+                            <p style="padding-left: 30px; text-align: justify;">Suponiendo que el nuevo nombre de
+                                superusuario va a ser 'admin' y contraseña: 'passadmin', deberia quedar:</p>
+                            <p style="padding-left: 30px; text-align: justify;"><em>set superusers="admin"</em></p>
+                            <p style="padding-left: 30px; text-align: justify;">la línea siguiente (38) declara el
+                                usuario consejería y la contraseña encriptada en formato grub.pbkdf2 se debe poner en
+                                este formato, par lo cual podemos utilizar la pestaña de configuración de SRP de la
+                                página:<a href="https://jgilpalacios.neocities.org/SRP/" target="_blank" rel="noopener">
+                                    https://jgilpalacios.neocities.org/SRP/</a> , en entrada de texto "superuser:
+                                consejeria =&gt; clave:", tecleamos la nueva clave (si se pone el raton sobre la entrada
+                                de texto se mostrara la clave que estamos configurando), una vez esté tecleada de forma
+                                correcta debemos hacer click con el ratón fuera del cuadro de texto y veremos que
+                                desaparece el cuadro de texto: "Encriptado grub.pbkdf2: " en cuanto vuelva a aparecer en
+                                el cuadro de texto está contenida la contraseña encriptada (como es mucho más larga que
+                                el tamaño del cuadro solo se muestra su inicio), haciendo doble click en el cuadro de
+                                texto se copia al portapapeles la nueva contraseña encriptada.</p>
+                            <p style="padding-left: 30px; text-align: justify;"><strong>La linea 38 (aunque no lo
+                                    parezca) es una sola linea de texto</strong> pero según el editor que se use es
+                                posible que aparente ser más de una, pues al ser tan larga la contraseña encriptada, es
+                                posible que la corte y la muestre ocupando varias lineas, como ocurre aquí. Es decir
+                                <strong>despues de 'consejeria' solo hay un espacio en blanco</strong> no un salto de
+                                línea:
+                            </p>
+                            <p style="padding-left: 30px; text-align: left;"><em>password_pbkdf2 consejeria
+                                    grub.pbkdf2.sha512.10000.02984CBDC50A106BA8190753956CF3223FC4DA7F9DFD0A96E70EDAE1B8ED2C49BC6417A4D68CC328F025B6F702B6F5F5B405D384FF1930CAF43E04AD8EF4FDB8.F3F7DF836EF18CF5CE70A5123A0B242F68C88B0FC215915DD1C23E2E08A78900CA5CA11E8033FE1C8179E620FBBA517F0348D4C2A4448B9335B1FC603256FF1A</em>
+                            </p>
+                            <p style="padding-left: 30px;">en nuestro caso con los cambios propuestos en nombre de
+                                usuario: 'admin' y contrasña: 'passadmin' esa línea se convertiría en:</p>
+                            <p style="padding-left: 30px; text-align: left;"><em>password_pbkdf2 admin
+                                    grub.pbkdf2.sha512.10000.F5A240FD34E6383844813B2EC7DDB4270C065ACD29CDD78708E091BC89EF0574C33B6490D06C156DAE60B1DE9D884F9D2377AF279E8D188F8CBBAC792DD4822B.96E2C1FC8C048924DCFB8CF80C6A5290383034EAEAE6F9C12E42EAA5EBC351E7FA175CD557B4AF0CDA44EE72BC1C3B05DBADDB31B5BF3DD27199102C899C3294</em>
+                            </p>
+                            <p style="padding-left: 30px; text-align: justify;">Si no se quiere utilizar la página de
+                                configuración para obtener la contraseña encriptada, también se puede hacer en una
+                                consola de linux tecleando la orden: 'grub-mkpasswd-pbkdf2'. Nos pedirá que tecleemos la
+                                nueva contraseña dos veces y generará su formato encriptado, selecionamos el texto
+                                correspondiente, lo copiamos y lo pegamos a continuación de 'admin', dejando solo un
+                                espacio de separación.</p>
+                            <p style="text-align: justify;">3)<strong>La información que se muestra en la opción
+                                    "Información ..." del menú de entrada.</strong></p>
+                            <p style="padding-left: 30px; text-align: justify;">En el menú principal tenemos la opción
+                                de "Información..." la cual muestra una pantalla con información relativa a la maqueta
+                                realizada. Viene rellena con una información de ejemplo que nos interesará modificar.
+                            </p>
+                            <p style="padding-left: 30px; text-align: justify;">Abriendo menuprincipal.cfg con un editor
+                                de texto podemos modificar, eliminar o añadir más líneas de tipo "<strong>echo</strong>"
+                                pero en cualquier caso hay que tener cuidado de no modificar el resto de líneas del
+                                fichero que son significativas para mostrar el menú principal.</p>
+                            <p style="text-align: justify;"><strong> </strong></p>
+                            <p style="text-align: justify;"><strong>Modificación de fondos de pantalla</strong></p>
+                            <p style="text-align: justify;">Otra modificación posible es la de los fondos de los menús
+                                que se encuentran en fomato de imágen <strong>png</strong> en la carpeta
+                                <strong>srp/fondos</strong> del srp.zip obtenido.
+                            </p>
+                            <p style="text-align: justify;">En esa carpeta encontraremos varios ficheros gráficos en
+                                formato "png" los cuales podemos sustituir por los que nos interese. La resolución de
+                                los ficheros es de 800x600 píxeles que es la resolución gráfica a la que se configura el
+                                Grub. Por defecto se encuentran los siguientes fondos:</p>
+                            <ul style="text-align: justify;">
+                                <li>fondo.png</li>
+                                <li>fondo2.png</li>
+                                <li>fondo3.png</li>
+                                <li>fondogene.png</li>
+                                <li>fondorest.png</li>
+                            </ul>
+                            <p style="text-align: justify;">basta con respetar los nombres el formato de la imagen y la
+                                resolución para pesonalizar los menús con nuestras imágenes.</p>
+                            <p style="text-align: justify;"><strong>Modificar los permisos de las distintas opciones que
+                                    se van desplegando</strong></p>
+                            <p style="text-align: justify;">Ya se ha dicho que el acceso a opciones avanzadas se reserva
+                                tanto al usuario 'madrid' como al superusuario 'consejeria', de estos dos usuarios, solo
+                                'consejería' se pone como 'superusers' (en linea 36) y además la variable 'superusers',
+                                se pone como global (en linea 37), esta configuración, como se ha dicho se encuentra en
+                                las líneas 36 y 37 de menuprincipal.cfg;</p>
+                            <p style="padding-left: 30px; text-align: justify;">set superusers="consejeria"<br />export
+                                superusers</p>
+                            <p style="text-align: justify;">Si se cambia la línea 36 a:</p>
+                            <p style="padding-left: 30px; text-align: justify;">set superusers="consejeria madrid"</p>
+                            <p style="text-align: justify;">Tanto 'madrid' como 'consejeria' serian super usuarios y
+                                podrían acceder a todos los menús, con lo que se podría perder la granularidad de dejar
+                                separar en los dos niveles de responsabilidad las distintas tareas.</p>
+                            <p style="text-align: justify;">No obstante es posible que queriendo mantener esos dos
+                                niveles de responsabilidad, no se esté de acuerdo con lo que se restringe al usuario
+                                'madrid' y si se le quiere dar acceso a alguna de las opciones que por defecto se
+                                reserva al usuario 'consejeria'. Es factible hacer esto y a continuación se explica.</p>
+                            <p style="text-align: justify;">Realmente el usuario 'madrid', dado que no se
+                                <strong>exporta</strong> solo funciona en el el archivo de grub en que se define y por
+                                tanto en el resto de archivos de menús que se manejan desde menuavanzado.cfg (al que
+                                solo se puede acceder con usuario, bien 'madrid' bien 'consejeria'), solo tienen
+                                configurado el superusuario y por defecto sus entradas son accesibles al todo el 'mundo'
+                                (pero como hay que pasar por la puerta de entrada Opciones avanzadas..." ese 'mundo' son
+                                los dos usuarios antedichos) si estan configuradas como --unrestricted, es decir que una
+                                entrada reservada a 'consejería' (en cualquiera de los archivos distintos a
+                                menuprincipal.cfg) se puedea abrir a madrid si le añadimos la entedicha opcion
+                                --unrestricted. Como ejemplo en menugenemax2.cfg si queremos que 'madrid' pueda realizar
+                                el backup, la linea 7:
+                            </p>
+                            <p style="padding-left: 30px; text-align: justify;">menuentry "Iniciar backup de MAX"
+                                --users "" {</p>
+                            <p style="text-align: justify;">debería transformarse en:</p>
+                            <p style="padding-left: 30px; text-align: justify;">menuentry "Iniciar backup de MAX"
+                                --unrestricted {</p>
+                            <p style="text-align: justify;">De esta forma revisando el resto de los &lt;&gt;.cfg, con
+                                ese sencillo cambio daremos acceso al usuario 'madrid' a alguna tarea que por defecto
+                                estaba asisgnada a 'consejeria'.</p>
+                            <p style="text-align: justify;">Si estos cambios se hacen en el archivo menuprincipal.cfg (u
+                                otros archivos &lt;&gt;.cfg) y en la carpeta srp/fondos, para que tengan efecto en
+                                nuestro sistema SRP, está claro que debemos colocar esas modificaciones en las carpetas
+                                correspondientes de la partición SRPBACKUP, es decir que bien arrancado con el DVD o usb
+                                arrancable de System Rescue CD; o con la opción avanzada del menu correspondiente,
+                                podemos hacer la edición o bien recibir el archivo/s modificado/s para luego montando
+                                dicha partición incluir los archivos cambiados en /mnt/SRPBACKUP/srp/menus o
+                                /mnt/SRPBACKUP/srp/fondos.</p>
+                            <p style="text-align: justify;"><strong>AJUSTES DE TIPOS DE ARRANQUE, ARRANQUE DUAL O USO DE
+                                    UN SOLO SISTEMA OPERATIVO.</strong></p>
+                            <p style="text-align: justify;">Aunque se ha descrito por defecto la configuración de SRP
+                                para un arranque UEFI dual (Windows + MAX) es posible cofigurarlo para:</p>
+                            <ul style="text-align: justify;">
+                                <li><strong>Arranque legacy</strong>, usando la url de configuración (<a
+                                        href="https://jgilpalacios.neocities.org/SRP/" target="_blank"
+                                        rel="noopener">https://jgilpalacios.neocities.org/SRP/</a>) en la pestaña 'EFI'
+                                    desmarcamos la casilla de chekeo (al estar desmarcada da igual lo que marque de
+                                    disco y particion ya que no se tendrá en cuenta)</li>
+                                <li>Equipo con <strong>solo Windows instalado</strong>, en la misma url, en la pestaña
+                                    'MAX' desmarcamos el chequeo de 'particionMAX', el resto de valores de de esta
+                                    pestaña dejan de considerarse.</li>
+                                <li>Equipo con <strong>solo MAX instaldo, </strong>en la misma url, en la pestaña
+                                    'WINDOWS' desmarcamos el chequeo de 'particionWIN', el resto de valores de de esta
+                                    pestaña dejan de considerarse.</li>
+                            </ul>
+                            <h5 style="text-align: justify;">Video que muestra como instalar SRP en un equipo con
+                                arranque Legacy y windows instalado que dispone de dos discos duros en menos de 20'</h5>
+                            <p style="text-align: justify;"><iframe width="420" height="315"
+                                    style="border: 0; overflow: hidden;"
+                                    src="https://mediateca.educa.madrid.org/video/zqfx8p8o5ma7sx2f/fs" frameborder="0"
+                                    scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                        </div>
+                        <div class="tab-page">
+                            <p style="text-align: justify;">Una situación que puede ser frecuente es que tengamos varios
+                                equipos idénticos para un aula de informática que vienen con windows instalado y que
+                                queremos modificar para incluir el sistema de recuperación de particiones (SRP).</p>
+                            <p style="text-align: justify;">Una opción podría ser particionar, configurar e instalar el
+                                software necesario en uno de ellos y una vez hubiera quedado conforme a nuestras
+                                necesidades, hacer un clon de ese equipo con una herramiente como <a
+                                    href="https://clonezilla.org/downloads.php" target="_blank"
+                                    rel="noopener">clonezilla</a>, y con la imagen obtenida usando clonecilla
+                                restaurariamos sobre el resto de los equipos, (eliminando el contenido que traía cada
+                                equipo preinstalado), eso garantiza que todos los equipos quedan idénticos al 100%
+                                (incluidas las UUID de las distintas particiones). Para el sofware libre que se
+                                incluyera en el clon la situación no presenta ningún problema legal adicional, pero para
+                                el software propietario habría que ver lidiar con las licencias para ver que podamos
+                                legalizar el clonado en los equipos y ver si podíamos aplicar la que traía previamente
+                                el equipo en el software que se eliminó al clonar.</p>
+                            <p style="text-align: justify;">Otra opción que evitaría lidiar problemas con las licencias
+                                del windows preinstalado, es no eliminarlo, sino mantenerlo y particionar los equipos de
+                                forma idéntica uno a uno. El problema es que la herramienta de particionado que se
+                                prpone para instalar SRP, gparted es una aplicación con un entorno gráfico interactivo y
+                                habría que ser cuidadoso para que los redimensionados y tamaños de las particiones que
+                                se fueran creado fueran idénticos en todos los equipos, lo cual tiene su dificultad y
+                                sería propenso a errores. En este apartado se propone automatizar el proceso de creación
+                                del particionado mediante un script: <strong>particionador.sh</strong>, que junto con el
+                                srp.zip permitirá generar de forma automatizada las particiones y configurar el SRP de
+                                forma que queden idénticos todos los equipos (si bien las UUID de las particiones
+                                equvalentes en los distintos equipos serán diferentes), sin que se haya modificado el
+                                sistema windows de cada equipo, y por tanto sin que haya que revisar sus licencias.</p>
+                            <p style="text-align: justify;">PROCEDIMIENTO</p>
+                            <ol>
+                                <li style="text-align: justify;">Quitar bitlockquer en el primer equipo.</li>
+                                <li style="text-align: justify;">Obtener una imagen del primer equipo con una
+                                    herramienta como <a href="https://clonezilla.org/downloads.php" target="_blank"
+                                        rel="noopener">clonezilla</a>, asegurarse que sea correcta. Es necesario poder
+                                    volver a restaurar el equipo a su estado inicial pues los procesos que se hace con
+                                    el disco son delicados y pueden ocasionar que se pierda su información, si esto
+                                    ocurriera usando clonezilla y la imagen obtenida se podría restaurar al estado
+                                    inicial.</li>
+                                <li style="text-align: justify;">Arrancar el primer equipo con <a
+                                        href="https://www.system-rescue.org/" target="_blank"
+                                        rel="noopener">SystemRescueCD</a> con teclado español (setkmap es) y modo
+                                    gráfico (startx) y utilizando las páginas web: <a
+                                        href="https://jgilpalacios.neocities.org/SRP/particionador" target="_blank"
+                                        rel="noopener"><span
+                                            style="font-size: 14pt;">https://jgilpalacios.neocities.org/SRP/particionador</span></a>,
+                                    obtendríamos<strong> particionador.sh</strong>, en la página <span
+                                        style="font-size: 14pt;"><a href="https://jgilpalacios.neocities.org/SRP"
+                                            target="_blank" rel="noopener">https://jgilpalacios.neocities.org/SRP/</a>
+                                    </span>obtendríamos el <strong>srp.zip</strong>, apoyandonos con la simulación del
+                                    particionado mediante gparted (al final <strong>saldríamos de gparted <span
+                                            style="text-decoration: underline;">sin aplicar los
+                                            cambios</span></strong>), todo el proceso se describe en el video siguente:
+                                    <iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                                        src="https://mediateca.educa.madrid.org/video/5j4854831vaxslx6/fs"
+                                        frameborder="0" scrolling="no" allowfullscreen="allowfullscreen"></iframe>
+                                </li>
+                                <li style="text-align: justify;">Una vez se han obtenido
+                                    <strong>particionador.sh</strong> y <strong>srp.zip</strong>, lo ideal sería
+                                    copiarlos en un pendrive para eventualmente utilizarlos en los demás equipos. Se
+                                    aplica particionador.sh en el primer equipo (se puede ver su contenido con un editor
+                                    de texto para hacerse una idea de lo que hace), se autorizan las peticiones que
+                                    solicita y una vez finalizada su ejecución abriendo gparted veremos que el
+                                    particionado es el que deseabamos. Utilizando srp.zip pasamos a instalar y dejar
+                                    configurado el SRP (también se muestra esto en el video anterior).
+                                </li>
+                                <li style="text-align: justify;">Apagamos el primer equipo y volvemos a arrancar veremos
+                                    que arranca SRP que nos permite<strong> elegir la opción de arrancar
+                                        windows</strong>, seleccionamos arrancar windows y una vez dentro de windows
+                                    vamos al explorador de archivos, pulsamos con el botón derecho sobre el disco c:,
+                                    vamos a propiededes/herramientas y seleccionamos <strong>comprobar y reparar la
+                                        unidad</strong>. Esto se hace pues en el redimensionado de la partición de
+                                    windows pueden quedar inconsistencias y de esta forma será el propio windows el que
+                                    la deja en perfecto estado. (Tambien se muestra el proceso en el video anterior). Si
+                                    la partición de windows no quedara correcta tras este paso, el proceso no sería
+                                    válido y para recuperar el estado inicial se debería utilizar clonezilla y la imagen
+                                    que se creo en el paso 1.</li>
+                                <li style="text-align: justify;">Si en el paso 5 todo funciono correctamente se pasaría,
+                                    en cada uno del resto de los equipos, a aplicar el paso 1 (desactivar bitlocker),
+                                    arrancar con el pemdrive/CD de SystemRescueCD para llevar a cabolos pasos 4 y 5
+                                    usando el particionador.sh y srp.zip obtenidos (y guardados en un medio extrible)
+                                    con la garantía de que han funcionado correctamente en el equipo primero. Tras todo
+                                    el proceso tendríamos todos los equipos con SRP instalado y el Windows original del
+                                    equipo.</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-page">
+                <iframe src="https://jgilpalacios.neocities.org/SRP/" width="100%" height="600" style="border:0;"
+                    allowfullscreen="" loading="lazy"></iframe>
+            </div>
+
+            <div class="tab-page">
+                <div class="tabs">
+                    <div class="tab-menu">
+                        <button>Instalación</button>
+                        <button id="Postinstalación">Postinstalación</button>
+                    </div>
+                    <div class="tab-content">
+                        <div class="tab-page">
+                            <p style="text-align: justify;">Cuando instalamos una distribución Linux, en nuestro caso
+                                MAX, va a detectar que ya hay otros sistemas operativos instalados (windows) debemos
+                                tener en cuenta que al tener un particionado del disco complejo,<strong> no nos van a
+                                    servir las dos primeras opciones de instalación</strong> que nos ofece:</p>
+                            <ol style="text-align: justify;">
+                                <li>Instalar MAX junto a ellos</li>
+                                <li>Borrar disco e instalar MAX</li>
+                                <li><strong>Más opciones</strong></li>
+                            </ol>
+                            <p style="text-align: justify;">habra que seleccionar la tercera "Mas opciones" y continuar.
+                                En esta opción nos desplegará el particionado del disco y deberemos seleccionar la
+                                partición sdaX (en la imagen que sigue sda5) que tengamos reservada al crear las
+                                particiones SRP para MAX, ponerla como filesystem: <strong>ext4</strong> y punto de
+                                montaje<strong> /</strong>.</p>
+                            <p style="text-align: justify;">Tambien nos ofrece instalar su versión de Grub en sda, pero
+                                para que la configuración de SRP pueda funcionar correctamente <strong><span
+                                        style="text-decoration: underline;">no</span> debemos instalarlo <span
+                                        style="text-decoration: underline;">en dev/sda</span></strong> sino que
+                                <strong>debemos instalarlo en su misma partición:<span
+                                        style="text-decoration: underline;"> dev/sdaX</span> (en la imagen <span
+                                        style="text-decoration: underline;">dev/sda5</span>)</strong>.
+                            </p>
+                            <p style="text-align: justify;"><img src="./images/instalar_linux.png" alt=""
+                                    title="instalar_linux.png" width="808" height="537" /></p>
+                            <p style="text-align: justify;">En el siguiente video se muestra las primeras fases del
+                                proceso de instalción de MAX12 (en el vídeo la partición para MAX es la sda6):</p>
+                            <p style="text-align: justify;"><iframe width="420" height="315"
+                                    style="border: 0; overflow: hidden;"
+                                    src="https://mediateca.educa.madrid.org/video/8so25fzqtdv9wy1d/fs" frameborder="0"
+                                    scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                            <p style="text-align: justify;">Si se hace así en instalaciones Legacy (no UEFI) la próxima
+                                vez que arranque ya lo hará mediante los menús de SRP, si se dejara dev/sda lo haría con
+                                MAX quedando SRP inaccesible a no ser que reinstalemos correctamente grub (en la carpeta
+                                herramientas de srp.zip descargado nos montando las particiones con MontaSRPBACUP_SRP.sh
+                                y ejecutando InstalrGrubEnMBRsda.sh) más información en el apartado "<a href="#"
+                                    onclick="event.preventDefault(); document.getElementById('Postinstalación').click();">Postinstalación</a>".
+                            </p>
+                            <p style="text-align: justify;">En el caso del arranque UEFI aunque lo hagamos de forma
+                                correcta es muy probable que MAX cambie las opciones de arranque automaticamente para
+                                que arrancar con sus opciones, en el apartado "<a href="#"
+                                    onclick="event.preventDefault(); document.getElementById('Postinstalación').click();">Postinstalación</a>",
+                                vemo que en el archivo srp.zip
+                                ya se proporcionaron en la carpeta "herramientas" scripts para restaurar el arranque
+                                mediante los menus de SRP (PonerPrimeraLaEntradaSRPenEFI.sh), y el script se puede
+                                ejecutar incluso desde MAX. Un caso más extremo es que al instalarse (o actualizarse)
+                                MAX, rehaga el menú de arranque UEFI en el firmware del equipo y deje tan solo la
+                                entrada del grub de MAX, borrando las demás entradas (incluyendo la de SRP), desde el
+                                menú de grub podremos acceder al arranque de MAX y de Windows pero no incluirá SRP, por
+                                lo que nos quedaría inaccesible. En esta situación no nos serviría
+                                "PonerPrimeraLaEntradaSRPenEFI.sh" ya que MAX la habría borrado, como podremos comprobar
+                                con la orden <b>efibootmgr</b> sin parámetros, viendo que no aparece entrada para SRP
+                                (si apareciera funcionaría "PonerPrimeraLaEntradaSRPenEFI.sh), si este fuera el caso la
+                                entrada en el firmware se puede crear con la orden de la carpeta
+                                "/herramientas/clonado/" "<b>CreaEntradaSRPPostClonado.sh</b>" esa orden la podemos dar
+                                desde el propio MAX o arrancando con pen/DVD de SystemRescueCD, luego habra que
+                                asegurarse con "efibootmgr" sobre el orden de arranque y si no fuera SRP ponerlo con la
+                                orden "PonerPrimeraLaEntradaSRPenEFI.sh". </p>
+                        </div>
+                        <div class="tab-page">
+                            <p style="text-align: justify;">En el caso de que el equipo tenga arranque UEFI, al
+                                instalarse MAX lo más probable es que configure la entrada de arranque MAX como primera
+                                opción, por lo que si se arranca normalmente no apareceran los menus de SRP (se podría
+                                accdeder al arranque por la entrada SRP si al encender activamos las opciones de la bios
+                                y vamos a opciones de arranque y la seleccionamos, normamente pulsado una tecla: escape,
+                                f2, f10, supr... que depende de como lo tenga configurado nuestro equipo al encenderlo).
+                            </p>
+                            <p style="text-align: justify;">En arranque legacy, si no pusimos sdaX (donde X es el numero
+                                de la partición de MAX ) en lugar de sda cuando en la configuración de GRUB al instalar
+                                MAX, también pasaría lo mismo y no podríamos acceder a los menús de SRP.</p>
+                            <p style="text-align: justify;">La manera de resolver esta situación en el caso de UEFI
+                                sería cambiar el orden de arranque usando efibootmgr y en el caso de Legacy reinstalar
+                                GRUB para que arranque el sistma SRP, en la carpeta herramientas de srp.zip descargado
+                                se incluye el script que resolvería el problema en cada caso:</p>
+                            <ul style="text-align: justify;">
+                                <li>En UEFI el archivo es: PonerPrimeraLaEntradaSRPenEFI.sh</li>
+                                <li>En Legacy el archivo es: InstalrGrubEnMBRsda.sh, aunque previamenta habría que
+                                    ejecutar MontaSRPBACUP_SRP.sh para que esté montada la partición SRPBACKUP en /mnt.
+                                </li>
+                            </ul>
+                            <p style="text-align: justify;">Estos scripts se pueden ejecutar, desde un entorno linux:
+                            </p>
+                            <ol>
+                                <li style="text-align: justify;">arrancando el disco/usb de SystemRescueCD, </li>
+                                <li style="text-align: justify;">arrancando SRP (en la bios se selecciona manualmente la
+                                    entrada SRP solo en el caso de arranque UEFI) con el usuario consejería usando las
+                                    pociones avanzadas para arrancar SystemRescueCD,</li>
+                                <li style="text-align: justify;"><strong>lo más fácil</strong>, desde el propio arranque
+                                    de MAX.</li>
+                            </ol>
+                            <p style="text-align: justify;">Si los equipos se van a usar en un aula de informática (o
+                                por motivos de seguridad), tras instalar MAX puede convenir realizar un par de tareas
+                                que se mencionan a continuación;</p>
+                            <ol style="text-align: justify;">
+                                <li>Asignar un nombre de equipo diferente del que asiga MAX por defecto (en esta version
+                                    "max12"), esto es muy conveniente si se trata de tener MAX en varios equipos de un
+                                    aula de informática ya que si se conectan en red cada uno debería tener un nombre de
+                                    equipo diferente.</li>
+                                <li>Ocultar las particiones de windows que no sean de datos, SRP y SRPBACKUP para
+                                    dificultar
+                                    que usuarios no autorizados pudiesen acceder a ellas accidental o intencionadamente
+                                    y si
+                                    realizaran cambios en los archivos pudieran dejar inutilizables los equipos.</li>
+                            </ol>
+                            <p style="text-align: justify;">Para realizar estos cambios en los archivos de configuración
+                                de MAX necesarios, están los scripts: cambiarNombreEquipo.sh y
+                                ocultar_particiones_SRP_windows.sh de la carpeta /herramientas/MAX del archivo srp.zip
+                                que se obtuvo. Analizando las ordenes contenidas en esos archivos (dominando el lenguaje
+                                de consola de linux), se pueden ver las ordenes y archivos de configuración afectados
+                                por si quisiera hacer las modificaciones más ajustadas de forma manual.</p>
+                            <p style="text-align: justify;">En el video que sigue se muestra como realizar el ajuste de
+                                arranque en el caso de UEFI y estas dos tareas desde MAX:</p>
+                            <p><iframe width="420" height="315" style="border: 0; overflow: hidden;"
+                                    src="https://mediateca.educa.madrid.org/video/lvqm1qwh396huqgf/fs" frameborder="0"
+                                    scrolling="no" allowfullscreen="allowfullscreen"></iframe></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-page" style="text-align: justify;">
+                Para el uso más frecuente y tal y como se recomienda SRP maneja en la
+                partición SRPBACKUP dos carpetas en las que se incluyen los archivos de
+                copias de seguridad de los dos sistemas operativos que puede gestionar
+                (Windows y MAX). El nombre de dichas carpetas comienza por la palabra
+                'copia' y un número (1 y 2) de forma que:<br>
+                <ul>
+                    <li>la copia de fábrica guardará sus backups en la carpeta <span
+                            style="font-weight: bold;">copia1</span>;</li>
+                    <li>la copia personalizada guardará sus backpups en la carpeta <span
+                            style="font-weight: bold;">copia2</span>.</li>
+                </ul>
+                Por otra parte, por la filosofía que considera la copia de fábrica como
+                una copia personalizada debidamente probada y comprobada su
+                estabilidad, se plantea que la generación de la copia de fabrica no se
+                hicieera por los menus normales de SRP, sino que sería una tarea que
+                efectuaría el administrador accediendo con una de las opciones de
+                arranque con SystemRescue para mover dentro del entorno linux del
+                SO&nbsp; SystemRescue de la carpeta copia2 a la carpeta copia1 los
+                archivos de backup que considerara consolidados como copia de fábrica.<br>
+                La opción de arranque en el entorno linux de SystemRescue es lo
+                suficiente flexible y potente (y por tanto con cierto riesgo) para
+                realizar esa tarea y prácticamente cualquier otra que se pueda plantear.<br>
+                Dentro de las carpeta copiaX (donde X podria ser 1 o 2), los archivos
+                de bakup que corresponden a MAX y Windows serían:<br>
+                <ul>
+                    <li>MAX: <br>
+                    </li>
+                    <ul>
+                        <li><span style="font-weight: bold;">img_max.gz00, img_max.gz01</span>,
+                            ... que corresponden a la partición principal de MAX</li>
+                        <li><span style="font-weight: bold;">autorun5_swap,</span> que
+                            corresponde a información sobre la partición swap se haya incluido o no.</li>
+                    </ul>
+                    <li>Windows</li>
+                    <ul>
+                        <li><span style="font-weight: bold;">img_win_windows.gz00,
+                                img_win_windows.gz01</span>, ... que corresponden a la partición
+                            principal de windows (la que equivale a C:).</li>
+                        <li><span style="font-weight: bold;">img_win_system.gz,</span> que
+                            corresponde a la primera (y a veces unica) particion de recuperación de
+                            windows.</li>
+                        <li><span style="font-weight: bold;">img_win_systemp2.gz</span>,
+                            que en aquellas instalaciones de windows con dos particiones de
+                            recuperación correspondería a la segunda partición.</li>
+                    </ul>
+                </ul>
+                Es decir que moviendo estos archivos de copia2 a copia1 pasaríamos a
+                tener la copia de fábrica a partir de la personalizada.<br>
+                <br>
+                No obstante y para dar más flexibilidad en cuanto al número y tipo de
+                backups que se quieran tener en el equipo, se na planteadopermitir una
+                gestión más flexible sin que se precise entrar con el entorno linux de
+                SystemRescue (que otorga flexibilidad completa a costa de implicar
+                ciertos riesgos) ae ha ampliado el menú de las O<span style="font-weight: bold;">pciones Avanzadas
+                </span>de SRP con una
+                entrada más para el superusuario que son las <span
+                    style="font-weight: bold; color: rgb(153, 0, 0);">Opciones Especiales</span>:<br>
+                <img style="width: 799px; height: 597px;" alt="Opciones Especiales"
+                    src="images/OpcionesEspeciales/OpcionesEspeciales.png"><br>
+                Esta entrada del menú avanzado lleva a otro menú que nos permite
+                trabajar en una carpeta que puede ser distinta de copia1 y copia2
+                (maqueta de fabrica o personalizada) con backups o restauraciones de
+                Windows y MAX, o volver a meú avanzado si desistimos:<br>
+                <img style="width: 799px; height: 599px;" alt=""
+                    src="images/OpcionesEspeciales/OpcionesEspeciales2.png"><br>
+                Una precaución que se debe tener a la hora de usar las opciones
+                contenidas en el menú: Opciones especiales, es que el espiritu de SRP
+                es contener en el espacio de almacenamiento del propio equipo de los
+                archivos de copia de seguridad de los SO con que cuenta el equipo, y si
+                bien se ha considerado que con los tamaños normales de los discos
+                actuales son suficientes para manejar cierto número de copias de
+                seguridad, no tenemos un espacio ilimitado por lo que el uso poco
+                cuidadoso de la posibilidad que brindan las Opciones especiales llevara
+                a crear un numero de copias de seguridad diferentes que llevara a
+                agotar el espacio que se reservó para la partición SRPBACKUP.<br>
+                Teniendo en cuenta estas precauciones, estas opciones nos permiten
+                generar backups o restaurar tanto windows como MAX a o desde carpetas
+                distintas de copia1 y copia2, eso sí, se ha obligado a que los nombres
+                de las carpetas comiencen por la palabra <span style="font-weight: bold;">copia</span>, pudiendo añadir
+                como
+                coletilla cualquier combinación de letras y números a continuación.<br>
+                Cuando entremos con cualquiera de las cuatro opciones del menu
+                anterior, arrancará system rescue, nos mostrará en rojo el espacio
+                disponible en la partición SRPBACKUP, nos listará numeradas las carpeta
+                cuyo nombre comienza con la palabra <span style="font-weight: bold;">copia</span>
+                y además dos opciones adicionales:<br>
+                <ul>
+                    <li>0: introducir manualmente el nombre de la carpeta ya que ninguna
+                        de las numeradas nos valdría</li>
+                    <li>x: Salir sin definir el nombre, que descarta el proceso y
+                        reinicia
+                        el equipo (imagen que sigue).</li>
+                </ul>
+                <br>
+                <img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionNumX.png">
+                Elegir cualquiera de los otros numeros de las opciones (1 o 2 en la
+                imagen) llevaría a realizar el proceso (en este caso backup de windows)
+                sobre las carpetas: <br>
+                <ul>
+                    <li>si se elige 1 sobre la carpeta copia2</li>
+                    <li>si se elige 2 sobre la carpeta copiakk</li>
+                </ul>
+                <img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionNum.png"><br>
+                Si elegimos una de las opciones numeradas por ejemplo la opción 2 es
+                decir trabajar sobre la carpeta copiakk, nos sacará una confirmación de
+                la carpeta elegida en rojo y nos pedirá que confirmemos indicando si o
+                no (s/n), todavía podemos descartar realizar el proceso poniendo 'n'
+                (imagen que sigue),&nbsp; si ponemos 's' se llevaría a cabo:<br>
+                <br>
+                <img style="width: 1025px; height: 692px;" alt=""
+                    src="images/OpcionesEspeciales/SeleccionNumConfirmarNo.png">
+                <br>
+                Si ninguna de las carpetas listadas nos vale para el proceso, se
+                seleccionaría la opción 0, para poder indicar con el teclado la
+                coletilla a añadir a copia, si pulsamos esa opción:<br>
+                <br>
+                <img style="width: 1025px; height: 692px;" alt=""
+                    src="images/OpcionesEspeciales/SeleccionTexto.png"><br />
+                Nos aparece una linea que nos invita a teclear un nombre que conste del
+                letras y/o numeros y si quisieramos cancelar el proceso en este momento
+                basta con teclear el carácter # para acabar el proceso sin que se lleve
+                a cabo, ver imagen siguiente:<br>
+                <img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionTextoNo.png">
+                <br>
+                Si tecleamos un nombre válido por ejemplo "MAX", aparecerá una línea
+                indicando que el proceso se llevará a cabo sobre la carpeta <span
+                    style="font-weight: bold;">copiaMAX</span> en rojo nos pedirá que
+                confirmemos con sí o no (s/n):<br>
+                <img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionTextoMAX.png">
+                <br>
+                Todavía podemos desistir del proceso si pulsamos '<span style="font-weight: bold;">n</span>' (imagen que
+                sigue), si pulsamos
+                's' el proceso se llevará a cabo utilizando la carpeta 'copiaMAX'.<br>
+                <img style="width: 1025px; height: 692px;" alt=""
+                    src="images/OpcionesEspeciales/SeleccionTextoMAXno.png">
+                <br>
+                Como se ve con estas Opciones especiales, se brinda la posibilidad de
+                gestionar de forma bastante segura copias diferentes de las dos
+                estandar (fabrica y personalizada) de SRP, pero consideramos que no se
+                debe abusar por las limitaciones que normalmente nos encontraremos en
+                los equipos reales.<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ====== INICIALIZADOR DE PESTAÑAS (RECURSIVO) ====== */
+        function initTabs(container) {
+            const tabs = container.querySelectorAll(':scope > .tab-menu button');
+            const pages = container.querySelectorAll(':scope > .tab-content > .tab-page');
+            //alert('tabs:' + tabs.length + ' pages:' + pages.length)
+            function activate(index) {
+                tabs.forEach((t, i) => {//alert('t'+t+'i'+i)
+                    t.classList.toggle('active', i === index);
+                    pages[i].classList.toggle('active', i === index);
+                });
+            }
+
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => { activate(index) });
+            });
+
+            // Activar la primera pestaña por defecto
+            activate(0);
+        }
+
+        /* ====== INICIALIZAR TODAS LAS INSTANCIAS ====== */
+        document.querySelectorAll('.tabs').forEach(initTabs);
+    </script>
+
+</body>
+
+</html>
