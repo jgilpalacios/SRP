@@ -71,6 +71,7 @@
             <button>MAX</button>
             <button>Opciones especiales</button>
             <button>Actualizar un SO por clonado</button>
+            <button>Pérdida del menú de inicio de SRP</button>
         </div>
 
         <div class="tab-content">
@@ -1260,7 +1261,8 @@
                         el equipo (imagen que sigue).</li>
                 </ul>
                 <br>
-                <img style="width: 1025px; height: 692px;" alt="" src="images/OpcionesEspeciales/SeleccionNumX.png"><br/>
+                <img style="width: 1025px; height: 692px;" alt=""
+                    src="images/OpcionesEspeciales/SeleccionNumX.png"><br />
                 Elegir cualquiera de los otros numeros de las opciones (1 o 2 en la
                 imagen) llevaría a realizar el proceso (en este caso backup de windows)
                 sobre las carpetas: <br>
@@ -1310,80 +1312,176 @@
             </div>
             <div class="tab-page" style="text-align: justify;" id="CActualizar un SO por clonado">
                 <div style="text-align: justify;">Con el fin de facilitar la
-actualización de uno de los SO de equipos de
-un aula que son idénticos se ha incluido en la carpeta<span
-style="font-weight: bold;"> /mnt/SRPBACKUP/clonado </span>un script <span
-style="font-weight: bold;">srp_nfs.sh</span>
-que puede generar tanto un
-<span style="font-weight: bold;">servidor NFS </span>como un <span
-style="font-weight: bold;">cliente NFS</span>.<br>
-La actualización del SO de un equipo y su adaptación incluyendo el
-software y configuraciones necesarios puede, en algunos casos de
-grandes
-actualizaciones, suponer un tiempo considerable y un numero grande de
-pasos manuales. Proceder uno a uno en cada equipo sería multiplicar
-ese tiempo por el numero de equipos, con el inconveniente añadido de
-que si hay pasos manuales se pueden producir errores de forma que no
-quede homgeneos todos los equipos.<br>
-Como se ha dicho, si el tiempo de cada actualizacion ha sido de
-consideración, para propagarla al resto de los equipos puede ser un
-atajo seguir el procedimiento siguiente:<br>
-</div>
-<ol style="text-align: justify;">
-<li>Llevar a cabo la actuaización completa, exhaustiva y comprobada
-en el primer equipo.</li>
-<li>Hacer la copia personalizada de dicha actualización con la opción
-correspondiente de SRP.</li>
-<li>Arrancar el escript srp_nfs.sh en el primer equipo para que actúe
-como servidor NFS compartiendo (ro) la carpeta SRPBACKUP (<span
-style="font-weight: bold;">./srp_nfs.sh server</span>).</li>
-<li>Arrancar el escript srp_nfs.sh en el resto de equipos para que
-como clientes monten la carpeta expuesta del servidor en la carpeta
-local /mnt/NFS. (<span style="font-weight: bold;">./srp_nfs.sh client
-&lt;&lt;ipserver&gt;&gt;</span>)<br>
-</li>
-<li>Copiar los archivos de copia del SO de la carpeta /mnt/NFS/copia2
-a la carpeta /mnt/SRPBACKUP/copia2 (eliminando previamente los antiguos)</li>
-<li>Lanzar la restauración de copia personalizada en todos los
-equipos (en la carpeta <span style="font-weight: bold;">/mnt/SRPBACKUP/herramientas/clonado</span>)
-<span style="text-decoration: underline;">hay scripts</span>
-que permite hacerlo sin necesidad de reiniciar el equipo (<span
-style="font-weight: bold;">precisan que
-se salga del modo grafico</span>).</li>
-<li>Ajustar el nombre de equipo (ya que realmente se restaura el
-primer equipo sobre los demás)</li>
-<li>hacer la copia personalizada para que cada equipo contenga su
-copia perfectamente ajustada incluyendo el nombre de equipo.</li>
-</ol>
-<div style="text-align: justify;">Estos ocho pasos a partir del 3º se
-pueden lanzar en paralelo (realmente
-en pipeline) en todos los equipos del aula, de forma que vayan haciendo
-casi simultaneamente los procesos lentos (movimientos de archivos de
-copia de seguridad, restauración, copias de seguridad etc.) de forma
-que cuando un equipo acabe un proceso largo, se hace el proceso lento
-(lanzar clientes NFS, cambiar nombre de equipo) hasta competarlo y a
-continuacion se lanza el siguiente proceso lento y se pasa al siguiente
-equipo disponible.<br>
-<br>
-De esta forma la idea es que se tengan trabajando simultaneamente todos
-los equipos completando las distintas fases, de forma que el proceso se
-puede completar en el aula en solo algo de tiempo más que la duración
-del proceso completo en uno de los equipos.<br>
-<br>
-Además al no haber pasos manuales pues prácticamente dependen del
-lanzamiento de scripts ya preparados o tareas sencillas como
-seleccionar archivos de una carpeta y llevarlos a otra, que son
-bastante sencillos de llevar a cabo sin errores, se puede aseguurar que
-la actualización será la misma en todos los equipos.<br>
-<br>
-En el <span style="font-weight: bold;">video siguiente se muestra como
-realizar el proceso</span>:<br>
-</div>
-<br>
-<iframe
-src="https://mediateca.educa.madrid.org/video/4zr3ix7jzd1akavn/fs"
-style="border: 0pt none ; overflow: hidden;" allowfullscreen=""
-frameborder="0" height="315" scrolling="no" width="420"></iframe>
+                    actualización de uno de los SO de equipos de
+                    un aula que son idénticos se ha incluido en la carpeta<span style="font-weight: bold;">
+                        /mnt/SRPBACKUP/clonado </span>un script <span style="font-weight: bold;">srp_nfs.sh</span>
+                    que puede generar tanto un
+                    <span style="font-weight: bold;">servidor NFS </span>como un <span
+                        style="font-weight: bold;">cliente NFS</span>.<br>
+                    La actualización del SO de un equipo y su adaptación incluyendo el
+                    software y configuraciones necesarios puede, en algunos casos de
+                    grandes
+                    actualizaciones, suponer un tiempo considerable y un numero grande de
+                    pasos manuales. Proceder uno a uno en cada equipo sería multiplicar
+                    ese tiempo por el numero de equipos, con el inconveniente añadido de
+                    que si hay pasos manuales se pueden producir errores de forma que no
+                    quede homgeneos todos los equipos.<br>
+                    Como se ha dicho, si el tiempo de cada actualizacion ha sido de
+                    consideración, para propagarla al resto de los equipos puede ser un
+                    atajo seguir el procedimiento siguiente:<br>
+                </div>
+                <ol style="text-align: justify;">
+                    <li>Llevar a cabo la actuaización completa, exhaustiva y comprobada
+                        en el primer equipo.</li>
+                    <li>Hacer la copia personalizada de dicha actualización con la opción
+                        correspondiente de SRP.</li>
+                    <li>Arrancar el escript srp_nfs.sh en el primer equipo para que actúe
+                        como servidor NFS compartiendo (ro) la carpeta SRPBACKUP (<span
+                            style="font-weight: bold;">./srp_nfs.sh server</span>).</li>
+                    <li>Arrancar el escript srp_nfs.sh en el resto de equipos para que
+                        como clientes monten la carpeta expuesta del servidor en la carpeta
+                        local /mnt/NFS. (<span style="font-weight: bold;">./srp_nfs.sh client
+                            &lt;&lt;ipserver&gt;&gt;</span>)<br>
+                    </li>
+                    <li>Copiar los archivos de copia del SO de la carpeta /mnt/NFS/copia2
+                        a la carpeta /mnt/SRPBACKUP/copia2 (eliminando previamente los antiguos)</li>
+                    <li>Lanzar la restauración de copia personalizada en todos los
+                        equipos (en la carpeta <span
+                            style="font-weight: bold;">/mnt/SRPBACKUP/herramientas/clonado</span>)
+                        <span style="text-decoration: underline;">hay scripts</span>
+                        que permite hacerlo sin necesidad de reiniciar el equipo (<span
+                            style="font-weight: bold;">precisan que
+                            se salga del modo grafico</span>).
+                    </li>
+                    <li>Ajustar el nombre de equipo (ya que realmente se restaura el
+                        primer equipo sobre los demás)</li>
+                    <li>hacer la copia personalizada para que cada equipo contenga su
+                        copia perfectamente ajustada incluyendo el nombre de equipo.</li>
+                </ol>
+                <div style="text-align: justify;">Estos ocho pasos a partir del 3º se
+                    pueden lanzar en paralelo (realmente
+                    en pipeline) en todos los equipos del aula, de forma que vayan haciendo
+                    casi simultaneamente los procesos lentos (movimientos de archivos de
+                    copia de seguridad, restauración, copias de seguridad etc.) de forma
+                    que cuando un equipo acabe un proceso largo, se hace el proceso lento
+                    (lanzar clientes NFS, cambiar nombre de equipo) hasta competarlo y a
+                    continuacion se lanza el siguiente proceso lento y se pasa al siguiente
+                    equipo disponible.<br>
+                    <br>
+                    De esta forma la idea es que se tengan trabajando simultaneamente todos
+                    los equipos completando las distintas fases, de forma que el proceso se
+                    puede completar en el aula en solo algo de tiempo más que la duración
+                    del proceso completo en uno de los equipos.<br>
+                    <br>
+                    Además al no haber pasos manuales pues prácticamente dependen del
+                    lanzamiento de scripts ya preparados o tareas sencillas como
+                    seleccionar archivos de una carpeta y llevarlos a otra, que son
+                    bastante sencillos de llevar a cabo sin errores, se puede aseguurar que
+                    la actualización será la misma en todos los equipos.<br>
+                    <br>
+                    En el <span style="font-weight: bold;">video siguiente se muestra como
+                        realizar el proceso</span>:<br>
+                </div>
+                <br>
+                <iframe src="https://mediateca.educa.madrid.org/video/4zr3ix7jzd1akavn/fs"
+                    style="border: 0pt none ; overflow: hidden;" allowfullscreen="" frameborder="0" height="315"
+                    scrolling="no" width="420"></iframe>
+            </div>
+            <div class="tab-page" style="text-align: justify;" id="CPérdida del menú de inicio de SRP">
+                <div style="text-align: justify;">
+                    <h1>Pérdida del menú de inicio de SRP</h1>
+                    <br>
+                    Este fenómeno es bastante infrecuente si el arranque es Legacy y, por
+                    desgracia, puede ser bastante frecuente en el arranque UEFI.<br>
+                    <br>
+                    En ambos casos se presentará normalmente tras el proceso de
+                    actualización o instalación de los sistemas operativos y las soluciones
+                    se indican a continuación:<br>
+                </div>
+                <ul style="text-align: justify;">
+                    <li>En equipos con <span style="font-weight: bold;">arranque Legacy</span>:
+                        normalmente se producirán al
+                        instalar MAX si como punto de instalación se seleciona el disco (sda)
+                        en lugar de la partición donde se instalo MAX (sdaX) donde X es el
+                        numero de dicha partición. La solución en este caso es:</li>
+                    <ul>
+                        <li>Arrancar con el disco/pen de SystemRescueCD.</li>
+                        <li>Crear la carpeta /mnt/SRPBACKUP</li>
+                        <li>Montar la partición SRPBACKUP en /mnt/SRPBACKUP (mount
+                            /dev/sdaX /mnt/SRPBACKUP donde X es el numero de partición de SRPBACKUP
+                            consultable con gparted)</li>
+                        <li>En la carpeta /mnt/SRPBACKUP/herramientas ejecutar
+                            ./InstalrGrubEnMBRsda.sh que vuelve a instalar el grub de SRP en mbr.</li>
+                    </ul>
+                    <li>En equipos con <span style="font-weight: bold;">arranque UEFI</span>
+                        este fenómeno se puede dar con <span style="font-weight: bold;">más
+                            frecuencia</span> y puede ocurrir tras instalar actualizaciones tanto
+                        de
+                        windows como de MAX, por lo que habra que comprobar que funciona
+                        correctamente comprobando que tras la actualización al volver a
+                        arrancar cualquiera de los SO en el siguiente arranque se sigue
+                        mostrando el menú de SRP. Si tras hacer el proceso se observa que no se
+                        arranca con el menú de SRP tendremos que proceder a reparar el arranque
+                        y el proceso a seguir será diferente en función de las dos posibles
+                        causas que pueden originarlo:</li>
+                </ul>
+                <div style="text-align: justify;"></div>
+                <ol>
+                    <ol>
+                        <li style="text-align: justify;"><span style="font-weight: bold;">Se
+                                ha cambiado el orden de
+                                arranque </span>pero en la bios seguimos teniendo la entrada SRP, es
+                            decir que al encender pulsamos repetidamente la tecla que nos permite
+                            acceder a la bios (esc, f2, supr, f12, etc. dependerá de nuestro
+                            equipo), en las opciones de arranque seleccionamos SRP, arrancamos con
+                            la opcion avanzada: SystemRescueCD ... en modo gráfico. Vamos a la
+                            carpeta <span style="font-weight: bold;">/mnt/SRPBACKUP/herramientas </span>y
+                            ejecutamos en un terminal el script: .<span
+                                style="font-weight: bold;">/PonerPrimeraLaEntradaSRPenEFI.sh</span>.
+                            También es factible ejecutarlo desde MAX (usuario administrador
+                            "madrid") pero necesitaremos montar primero la partición SRPBACKUP y
+                            una vez en la carpeta herramientas ejecutar la orden con sudo: <span
+                                style="font-weight: bold;">sudo</span> .<span
+                                style="font-weight: bold;">/PonerPrimeraLaEntradaSRPenEFI.sh.</span></li>
+                        <li style="text-align: justify;"><span style="font-weight: bold;">Se
+                                ha borrado la entrada SRP</span>:
+                            si accedemos a la bíos no aparecerá dicha entrada, por lo que ha
+                            quedado completamente inaccesible y para resolverlo precisamos arrancar
+                            desde un entonrno linux que puede ser el arranque de MAX (si hubiera
+                            quedado dicha opcion) o bien tendríamos que utilizar el DVD/pen de
+                            SystemRescueCD. Una vez arrancado (MAX con el usuario administrador
+                            "madrid"):</li>
+                        <ol>
+                            <li style="text-align: justify;">Hay que crear la carpeta
+                                SRPBACKUP en /mnt.<br>
+                            </li>
+                            <li style="text-align: justify;">Hay montar la particion
+                                SRPBACKUP, podemos ver su numero X
+                                con gparted y la orden es: <span style="font-weight: bold;">mount
+                                    /dev/sdaX /mnt/SRPBACKUP </span>(en MAS con sudo: <span
+                                    style="font-weight: bold;">sudo mount /dev/sdaX /mnt/SRPBACKUP </span>)</li>
+                            <li style="text-align: justify;">Primero
+                                montamos todas las particiones que necesitamos con la orden
+                                MontaEFI_SRPBACUP_SRP.sh de la carpeta /mnt/SRPBACKUP/herramientas: .<span
+                                    style="font-weight: bold;">/MontaEFI_SRPBACUP_SRP.sh</span> o en MAX <span
+                                    style="font-weight: bold;">sudo&nbsp; ./MontaEFI_SRPBACUP_SRP.sh</span></li>
+                            <li style="text-align: justify;">A continuación hay que recrear
+                                la entrada en la NVRAM del
+                                equipo pasamos a la carpeta clonado
+                                (mnt/SRPBACKUP/herramientas/clonado)&nbsp;
+                                y ejecutamos el script CreaEntradaSRPPostClonado.sh escribiendo:&nbsp; .<span
+                                    style="font-weight: bold;">/CreaEntradaSRPPostClonado.sh </span>o en
+                                MAX con sudo: <span style="font-weight: bold;">sudo
+                                    ./CreaEntradaSRPPostClonado.sh</span></li>
+                            <li style="text-align: justify;">Podemos
+                                con la orden efibootmgr ver si tenemos la entrada SRP y si en el oren
+                                de arranque está la primera, en caso de no estar la primera podemos
+                                ejecutar el script: ./PonerPrimeraLaEntradaSRPenEFI.sh del caso
+                                anterior<span style="font-weight: bold;"><br>
+                                </span></li>
+                        </ol>
+                    </ol>
+                </ol>
             </div>
         </div>
     </div>
