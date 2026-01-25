@@ -70,6 +70,7 @@
             <button>Configuración</button>
             <button>MAX</button>
             <button>Opciones especiales</button>
+            <button>Actualizar un SO por clonado</button>
         </div>
 
         <div class="tab-content">
@@ -1306,6 +1307,83 @@
                 estandar (fabrica y personalizada) de SRP, pero consideramos que no se
                 debe abusar por las limitaciones que normalmente nos encontraremos en
                 los equipos reales.<br>
+            </div>
+            <div class="tab-page" style="text-align: justify;" id="CActualizar un SO por clonado">
+                <div style="text-align: justify;">Con el fin de facilitar la
+actualización de uno de los SO de equipos de
+un aula que son idénticos se ha incluido en la carpeta<span
+style="font-weight: bold;"> /mnt/SRPBACKUP/clonado </span>un script <span
+style="font-weight: bold;">srp_nfs.sh</span>
+que puede generar tanto un
+<span style="font-weight: bold;">servidor NFS </span>como un <span
+style="font-weight: bold;">cliente NFS</span>.<br>
+La actualización del SO de un equipo y su adaptación incluyendo el
+software y configuraciones necesarios puede, en algunos casos de
+grandes
+actualizaciones, suponer un tiempo considerable y un numero grande de
+pasos manuales. Proceder uno a uno en cada equipo sería multiplicar
+ese tiempo por el numero de equipos, con el inconveniente añadido de
+que si hay pasos manuales se pueden producir errores de forma que no
+quede homgeneos todos los equipos.<br>
+Como se ha dicho, si el tiempo de cada actualizacion ha sido de
+consideración, para propagarla al resto de los equipos puede ser un
+atajo seguir el procedimiento siguiente:<br>
+</div>
+<ol style="text-align: justify;">
+<li>Llevar a cabo la actuaización completa, exhaustiva y comprobada
+en el primer equipo.</li>
+<li>Hacer la copia personalizada de dicha actualización con la opción
+correspondiente de SRP.</li>
+<li>Arrancar el escript srp_nfs.sh en el primer equipo para que actúe
+como servidor NFS compartiendo (ro) la carpeta SRPBACKUP (<span
+style="font-weight: bold;">./srp_nfs.sh server</span>).</li>
+<li>Arrancar el escript srp_nfs.sh en el resto de equipos para que
+como clientes monten la carpeta expuesta del servidor en la carpeta
+local /mnt/NFS. (<span style="font-weight: bold;">./srp_nfs.sh client
+&lt;&lt;ipserver&gt;&gt;</span>)<br>
+</li>
+<li>Copiar los archivos de copia del SO de la carpeta /mnt/NFS/copia2
+a la carpeta /mnt/SRPBACKUP/copia2 (eliminando previamente los antiguos)</li>
+<li>Lanzar la restauración de copia personalizada en todos los
+equipos (en la carpeta <span style="font-weight: bold;">/mnt/SRPBACKUP/herramientas/clonado</span>)
+<span style="text-decoration: underline;">hay scripts</span>
+que permite hacerlo sin necesidad de reiniciar el equipo (<span
+style="font-weight: bold;">precisan que
+se salga del modo grafico</span>).</li>
+<li>Ajustar el nombre de equipo (ya que realmente se restaura el
+primer equipo sobre los demás)</li>
+<li>hacer la copia personalizada para que cada equipo contenga su
+copia perfectamente ajustada incluyendo el nombre de equipo.</li>
+</ol>
+<div style="text-align: justify;">Estos ocho pasos a partir del 3º se
+pueden lanzar en paralelo (realmente
+en pipeline) en todos los equipos del aula, de forma que vayan haciendo
+casi simultaneamente los procesos lentos (movimientos de archivos de
+copia de seguridad, restauración, copias de seguridad etc.) de forma
+que cuando un equipo acabe un proceso largo, se hace el proceso lento
+(lanzar clientes NFS, cambiar nombre de equipo) hasta competarlo y a
+continuacion se lanza el siguiente proceso lento y se pasa al siguiente
+equipo disponible.<br>
+<br>
+De esta forma la idea es que se tengan trabajando simultaneamente todos
+los equipos completando las distintas fases, de forma que el proceso se
+puede completar en el aula en solo algo de tiempo más que la duración
+del proceso completo en uno de los equipos.<br>
+<br>
+Además al no haber pasos manuales pues prácticamente dependen del
+lanzamiento de scripts ya preparados o tareas sencillas como
+seleccionar archivos de una carpeta y llevarlos a otra, que son
+bastante sencillos de llevar a cabo sin errores, se puede aseguurar que
+la actualización será la misma en todos los equipos.<br>
+<br>
+En el <span style="font-weight: bold;">video siguiente se muestra como
+realizar el proceso</span>:<br>
+</div>
+<br>
+<iframe
+src="https://mediateca.educa.madrid.org/video/4zr3ix7jzd1akavn/fs"
+style="border: 0pt none ; overflow: hidden;" allowfullscreen=""
+frameborder="0" height="315" scrolling="no" width="420"></iframe>
             </div>
         </div>
     </div>
