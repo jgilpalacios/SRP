@@ -1455,22 +1455,16 @@
                             <li style="text-align: justify;">Hay que crear la carpeta
                                 SRPBACKUP en /mnt.<br>
                             </li>
-                            <li style="text-align: justify;">Hay montar la particion
+                            <li style="text-align: justify;">Hay que montar la partición
                                 SRPBACKUP, podemos ver su numero X
                                 con gparted y la orden es: <span style="font-weight: bold;">mount
-                                    /dev/sdaX /mnt/SRPBACKUP </span>(en MAS con sudo: <span
+                                    /dev/sdaX /mnt/SRPBACKUP </span>(en MAX con sudo: <span
                                     style="font-weight: bold;">sudo mount /dev/sdaX /mnt/SRPBACKUP </span>)</li>
-                            <li style="text-align: justify;">Primero
-                                montamos todas las particiones que necesitamos con la orden
-                                MontaEFI_SRPBACUP_SRP.sh de la carpeta /mnt/SRPBACKUP/herramientas: .<span
-                                    style="font-weight: bold;">/MontaEFI_SRPBACUP_SRP.sh</span> o en MAX <span
-                                    style="font-weight: bold;">sudo&nbsp; ./MontaEFI_SRPBACUP_SRP.sh</span></li>
-                            <li style="text-align: justify;">A continuación hay que recrear
-                                la entrada en la NVRAM del
-                                equipo pasamos a la carpeta clonado
-                                (mnt/SRPBACKUP/herramientas/clonado)&nbsp;
-                                y ejecutamos el script CreaEntradaSRPPostClonado.sh escribiendo:&nbsp; .<span
-                                    style="font-weight: bold;">/CreaEntradaSRPPostClonado.sh </span>o en
+                            <li style="text-align: justify;">Hay que recrear
+                                la entrada para SRP en la NVRAM del equipo. Entramos a la carpeta
+                                /mnt/SRPBACKUP/herramientas/clonado&nbsp;
+                                y ejecutamos el script CreaEntradaSRPPostClonado.sh escribiendo:&nbsp; <span
+                                    style="font-weight: bold;">./CreaEntradaSRPPostClonado.sh </span>o en
                                 MAX con sudo: <span style="font-weight: bold;">sudo
                                     ./CreaEntradaSRPPostClonado.sh</span></li>
                             <li style="text-align: justify;">Podemos
