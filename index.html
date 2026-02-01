@@ -999,11 +999,16 @@ grub-install --no-floppy --root-directory=/mnt/SRPBACKUP /dev/sda
 
 ## Ponemos en primer lugar del orden de arranque con el comando efibootmgr el arranque con SRP. 
 
-# Obtener el número de la nueva entrada SRP creada, eliminando el asterisco
-NEW_ENTRY=$(efibootmgr | grep "SRP" | awk '{print $1}' | sed -E 's/Boot([0-9]+)\\*/\\1/')
+# Obtener el número de la nueva entrada cuyo nombre comienza por SRP creada, eliminando el asterisco
+NEW_ENTRY=$(efibootmgr | grep -E "^Boot[0-9A-Fa-f]{4}\\* SRP" | awk '{print $1}' | sed -E 's/^Boot([0-9A-Fa-f]{4})\\*/\\1/')
+
+if [ -z "$NEW_ENTRY" ]; then
+    echo "No se encontró una entrada que contenga ' SRP'"
+    exit 1
+fi
 
 # Obtener las entradas actuales de arranque, eliminando posibles asteriscos
-EXISTING_ENTRIES=$(efibootmgr | grep -E "Boot[0-9]+" | awk '{print $1}' | sed -E 's/Boot([0-9]+)\\*/\\1/')
+EXISTING_ENTRIES=$(efibootmgr | grep -E '^Boot[0-9A-Fa-f]{4}' | sed -E 's/^Boot([0-9A-Fa-f]{4})\\*.*/\\1/')
 
 # Crear una nueva lista de orden de arranque, eliminando duplicados
 ORDER="$NEW_ENTRY,$(echo "$EXISTING_ENTRIES" | tr ' ' '\\n' | grep -v "^$NEW_ENTRY$" | tr '\\n' ',' | sed 's/,$//')"
