@@ -719,14 +719,15 @@
                     nombre por ejemplo "cd" dentro de la carpeta /mnt/ y procedemos a montarla en la consola tecleando
                     el comando:<strong> mount /dev/sr0 /mnt/cd</strong></p>
                 <p style="text-align: justify;">En ese momento la carpeta /mnt/cd contiene los archivos del DVD,
-                    entramos en ella seleccionamos todas sus carpetas y las llevamos a la carpeta /mnt/SRP con lo que se
+                    entramos en ella seleccionamos todas sus carpetas (<b>EXCEPTO LA CARPETA boot</b>)  y las llevamos a la carpeta /mnt/SRP con lo que se
                     copiara el contenido completo del CD a dicha partición.</p>
+                <p style="text-align: justify;">Si se copia la carpeta boot, cuando se intente arrancar con DVD/pen con versiones diferentes de SystemRescueCD se producirá un error de arranque pues por no coincidir la versión, pues puede pasar que en lugar de leer los archivos de boot del DVD/pen los lea de la particion SRP/boot. Si no están no puede leerlos y los leerá del DVD/pen que es lo correcto. (El archivo que ocasiona el problema es /boot/grub/grubsrcd.cfg, pero realmente no necesita ninguno de esa carpeta por lo que es mejor no copiarla)</p>    
                 <p style="text-align: justify;">En /mnt/SRP tendremos ahora, entre otras, la carpeta autorun pero estará
                     vacía, la llenaremos llevando a /mnt/SRP la carpeta autorun que tenemos dentro de la carpeta srp del
                     escritorio (obtenida al descoprimir srp.zip).</p>
                 <p style="text-align: justify;">De la misma forma copiamos a /mnt/SRPBACKUP las carpetas que hay dentro
                     de la carpeta srp del escrtorio a saber: srp, boot, herramientas y autorun. (realmente solo
-                    <em>sería extrictamente necesario copiar srp y boot</em> pero hemos visto que contiene scripts que
+                    <em>sería estrictamente necesario copiar srp y boot</em> pero hemos visto que contiene scripts que
                     pueden se necesarios en otras ocasiones y autorun sería una copia de seguridad de la copia que
                     hicimos en SRP, ya que al apagar todo lo que tenemos en escritorio o en mnt se desmonta y desaparece
                     y solo quedaría permanente lo que hemos colocado en SRPBACKUP)(el contenido de boot se añadiría a lo
