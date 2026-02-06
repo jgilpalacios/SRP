@@ -99,6 +99,17 @@
             <button id="selectPartBtn">Buscar particiones.txt</button>
             <input id="partFileInput" type="file" accept=".txt,text/plain" style="display:none" /></span>
     </p>
+    <p>Tipo de discos:<br />
+        disco1:<select id="tipoDisco1">
+            <option value="sda">SATA (sda)</option>
+            <option value="nvme0n1">M.2 NVMe (nvme0n1)</option>
+        </select><br />
+        Ejecuta la orden: <b>lsblk -J -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID >
+            bloques.json</b> y carga el archivo con el siguiente botón para identificar correctamente los discos y
+        particiones en sistemas con NVMe y SATA.<br />
+        <input type="file" id="fileInputDisco" accept=".json">
+    <div id="discos"></div>
+    </p>
 
     <div class="tabs" id="tabs"></div>
     <div id="menu" class="menu"></div>
@@ -122,12 +133,65 @@
             users: [{ nombre: 'madrid', pass: 'cmadrid', enc: false }, { nombre: 'consejeria', pass: 'cconsejeria', enc: true }],
             nDiscos: 1,
             particiones: [
-                { nombre: 'EFI', particionEFI: { disco: 'a', particion: 1, activa: true } },
-                { nombre: 'SRP', particionSRP: { disco: 'a', particion: 7, activa: true }, particionSRPBACKUP: { disco: 'a', particion: 8, activa: true } },
-                { nombre: 'WINDOWS', particionWIN: { disco: 'a', particion: 3, activa: true }, particionRES: { disco: 'a', particion: 4, activa: true }, particionRES2: { disco: 'a', particion: 4, activa: false } },
-                { nombre: 'MAX', particionMAX: { disco: 'a', particion: 5, activa: true }, particionSWAP: { disco: 'a', particion: 6, activa: true } }
+                { nombre: 'EFI', particionEFI: { disco: 'sda', particion: 1, activa: true } },
+                { nombre: 'SRP', particionSRP: { disco: 'sda', particion: 7, activa: true }, particionSRPBACKUP: { disco: 'sda', particion: 8, activa: true } },
+                { nombre: 'WINDOWS', particionWIN: { disco: 'sda', particion: 3, activa: true }, particionRES: { disco: 'sda', particion: 4, activa: true }, particionRES2: { disco: 'sda', particion: 4, activa: false } },
+                { nombre: 'MAX', particionMAX: { disco: 'sda', particion: 5, activa: true }, particionSWAP: { disco: 'sda', particion: 6, activa: true } }
             ]
         };
+        ///GESION DE NVME
+        document.getElementById("fileInputDisco").addEventListener("change", function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (evt) {
+                const data = JSON.parse(evt.target.result);
+                procesarBloques(data.blockdevices);
+            };
+
+            reader.readAsText(file);
+        });
+        let namespaces = [];
+        function procesarBloques(devices) {
+            const cont = document.getElementById("discos");
+            cont.innerHTML = "";
+            let discosTotales = 0;
+            devices
+                .filter(d => d.type === "disk")   // 👈 namespaces NVMe + discos SATA
+                .forEach((disk, i) => {
+                    discosTotales++;
+                    if(disk.name.startsWith('nvme'))disk.name+='p';//en nvme las particiones se nombran con una p entre el nombre del disco y el número de partición, por ejemplo nvme0n1p1, mientras que en sata es sdax donde x es la letra del disco y el número de partición va justo después sin p, por ejemplo nvem0n1p1 vs sda1, por eso añadimos la p al nombre del disco nvme para luego identificar correctamente las particiones
+                    if(disk.name.startsWith('mmcblk'))disk.name+='p';//en mmcblk ocurre lo mismo que en nvme, las particiones se nombran con una p entre el nombre del disco y el número de partición, por ejemplo mmcblk0p1, mientras que en sata es sdax donde x es la letra del disco y el número de partición va justo después sin p, por ejemplo mmcblk0p1 vs sda1, por eso añadimos la p al nombre del disco mmcblk para luego identificar correctamente las particiones
+                    namespaces.push(disk);
+                    const div = document.createElement("div");
+
+                    div.innerHTML = `
+        <h3>Disco ${i + 1}</h3>
+        Nombre: ${disk.name} <br>
+        Tipo: ${disk.tran} <br>
+        Tamaño: ${disk.size} <br>
+        Modelo: ${disk.model || "?"}
+        <br><strong>Particiones:</strong>
+      `;
+
+                    if (disk.children) {
+                        disk.children.forEach(p => {
+                            const pDiv = document.createElement("div");
+                            pDiv.textContent = `↳ ${p.name} (${p.fstype || "sin FS"}) - ${p.size} - ${p.mountpoint || "no montada"} - ${p.uuid || "sin UUID"} - ${p.partuuid || "sin PARTUUID"}`;
+                            div.appendChild(pDiv);
+                        });
+                    }
+
+                    cont.appendChild(div);
+                });
+            configuracion.nDiscos = discosTotales;
+            cargarTabs();
+            alert(JSON.stringify(namespaces));
+        }
+
+
+
+        //////////FIN GESTION NVME
         //////////
         let configuraciónContenido = null; // contiene el texto del archivo (string)
 
@@ -292,7 +356,7 @@
                         const p = part[key];
                         p.UUID = null; // resetear antes
                         if (p.activa) {
-                            const nombreDev = `/dev/sd${p.disco}${p.particion}`;
+                            const nombreDev = `/dev/${p.disco}${p.particion}`;
                             if (mapaUUID[nombreDev]) {
                                 p.UUID = mapaUUID[nombreDev].split('"')[1];
                             } else {
@@ -391,8 +455,10 @@
             document.execCommand("copy"); // Copia el texto al portapapeles
         }
         hashedPassword.style.visibility = 'hidden';
-
+        let indexActual, tabActual;
         function mostrarMenu(index, tab) {
+            indexActual = index;
+            tabActual = tab;
             const menu = document.getElementById("menu");
             menu.innerHTML = "";
             menu.style.backgroundColor = tab.style.backgroundColor;
@@ -408,23 +474,45 @@
                     label.innerText = clave + ": ";
                     let select = document.createElement("select");
 
-                    for (let i = 1; i <= 9; i++) {
-                        let option = document.createElement("option");
-                        option.value = i;
-                        option.innerText = i;
-                        if (particion[clave].particion === i) option.selected = true;
-                        select.appendChild(option);
+                    if (namespaces.length === 0) {
+                        for (let i = 1; i <= 9; i++) {
+                            let option = document.createElement("option");
+                            option.value = i;
+                            option.innerText = i;
+                            if (particion[clave].particion === i) option.selected = true;
+                            select.appendChild(option);
+                        }
                     }
 
                     let discoSelect = document.createElement("select");
-                    let discos = ['a', 'b', 'c', 'd'].slice(0, configuracion.nDiscos);
+                    let discos = ['sda', 'sdb', 'sdc', 'sdd'].slice(0, configuracion.nDiscos);
+                    if (namespaces.length > 0) discos = namespaces.map(d => d.name);
                     discos.forEach(disco => {
                         let option = document.createElement("option");
                         option.value = disco;
-                        option.innerText = "sd" + disco;
-                        if (particion.nombre === "EFI" && disco !== "a") return;
+                        option.innerText = /*"sd" +*/ disco;
+                        if (particion.nombre === "EFI" && disco !== discos[0]) return;
                         if (particion[clave].disco === disco) option.selected = true;
                         discoSelect.appendChild(option);
+                        if (namespaces.length > 0 && particion[clave].disco === disco) {
+                            //alert(disco)
+                            let numOption = 0;
+                            let particionDiscoUUID='';
+                            namespaces.filter(d => d.name === disco)[0].children.forEach((p, i) => {
+                                //alert(JSON.stringify(p));
+                                particionDiscoUUID = p.uuid;
+                                option = document.createElement("option");
+                                option.value = i + 1;
+                                option.innerText = i + 1;
+                                if (particion[clave].particion === i + 1) option.selected = true;
+                                select.appendChild(option);
+                                numOption++;
+                            });
+                            if(numOption===1){
+                                particion[clave].UUID = particionDiscoUUID;
+                                 particion[clave].particion = 1;
+                            }
+                        }
                     });
 
                     discoSelect.onchange = () => {
@@ -433,33 +521,38 @@
                         //if(configuracion.usarUUID) alert('Si ha cambiado el disco y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
                         particion[clave].UUID = null;
                         label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
-                        //actualizarDiscos();
+                        let iAc=indexActual, tabAc=tabActual;
+                        actualizarDiscos();
+                        mostrarMenu(iAc, tabAc);
+                       
                     };
 
                     let checkbox = document.createElement("input");
                     checkbox.type = "checkbox";
                     checkbox.checked = particion[clave].activa;
 
-                    select.onchange = () => {
+                    select.onchange = () => {//alert(select.value)
                         particion[clave].particion = parseInt(select.value);
                         document.getElementById("error").innerText = '';
                         //if(configuracion.usarUUID) alert('Si ha cambiado la partición y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
                         particion[clave].UUID = null;
+                        if(namespaces.length>0){//alert(particion[clave].disco+select.value+'-'+particion[clave].disco+JSON.stringify(namespaces.filter(d => d.name === particion[clave].disco)[0].children.filter(p => p.name === particion[clave].disco+select.value)[0]));//si hay namespaces asignamos el disco al cambiar la particion porque en nvme el numero de particion no es fijo para cada disco
+                        particion[clave].UUID = namespaces.filter(d => d.name === particion[clave].disco)[0].children.filter(p => p.name === particion[clave].disco+select.value)[0].uuid;}
                         label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                     }
-                    checkbox.onchange = () => {                        
+                    checkbox.onchange = () => {
                         particion[clave].activa = checkbox.checked;
-                        if(clave==='particionWIN'&&!particion[clave].activa){
+                        if (clave === 'particionWIN' && !particion[clave].activa) {
                             //si desactiva windows desactiva las particiones de recuperación
-                            particion['particionRES'].activa=false;
-                            particion['particionRES2'].activa=false;
+                            particion['particionRES'].activa = false;
+                            particion['particionRES2'].activa = false;
                             document.getElementById(particion.nombre + '_tab').click();// = particion.nombre + '_tab';
                         }
-                        if(clave==='particionMAX'&&!particion[clave].activa){
+                        if (clave === 'particionMAX' && !particion[clave].activa) {
                             //si desactiva MAX desactiva la particion swap
-                            particion['particionSWAP'].activa=false;
+                            particion['particionSWAP'].activa = false;
                             document.getElementById(particion.nombre + '_tab').click();
-                         
+
                         }
                         document.getElementById("error").innerText = '';
                     }
@@ -501,7 +594,7 @@
             menu.classList.add("visible");
         }
 
-        function comprobarErrores() {
+        function comprobarErrores() {alert(JSON.stringify(configuracion));
             let recuerdaCargarUUIDs = '';
             document.getElementById("cargarConfResultado").style.visibility = 'hidden';
             if (configuracion.usarUUID && !seHaCargadoUUIDsFile) {
@@ -519,13 +612,13 @@
                         let id = particion[clave].disco + particion[clave].particion;
                         if (particion[clave].activa) {
                             if (activas.has(id)) {
-                                errorMsg += `Conflicto: La partición sd${id} está duplicada.\n`;
+                                errorMsg += `Conflicto: La partición ${id} está duplicada.\n`;
                             }
                             activas.add(id);
                             if (configuracion.usarUUID) {
                                 if (!particion[clave].UUID) {
                                     recuerdaCargarUUIDs = '\nRecuerda cargar las UUIDs desde el archivo particiones.txt si has cambiado alguna partición o disco.\n';
-                                    errorMsg += `Error: La partición sd${id} no tiene UUID asignada.\n`;
+                                    errorMsg += `Error: La partición ${id} no tiene UUID asignada.\n`;
                                 } else {
                                     if (UUIDs.has(particion[clave].UUID)) {
                                         errorMsg += `Conflicto: La UUID ${particion[clave].UUID} está duplicada.\n`;
@@ -539,8 +632,8 @@
             });
 
             let efi = configuracion.particiones.find(p => p.nombre === "EFI");
-            if (efi && efi.particionEFI.disco !== 'a') {
-                errorMsg += "Error: La partición EFI debe estar en el disco 'a'.\n";
+            if (efi && efi.particionEFI.disco !== namespaces[0].name/*'a'*/) {
+                errorMsg += "Error: La partición EFI debe estar en el disco '"+namespaces[0].name+"'.\n";
             }
             if (!estaEncriptada) generatePBKDF2();//solo si no se ha encriptado previamente se lanza
             //comprobamos que si usammos windows legacy esta activada la primera particion de recuperacion
@@ -574,7 +667,7 @@
                     errorMsg += 'Error: La segunda particion de recuperación de windows no puede estar activa si la primera no lo está.\n';
                 }
             }
-            if(pWin.activa && !pResW.activa){
+            if (pWin.activa && !pResW.activa) {
                 errorMsg += 'Error: Windows tiene siempre la primera particion de recuperación activa.\n';
             }
             //alert(!pEFI.activa&&pWin.activa&&!pResW.activa+'****')
@@ -628,14 +721,14 @@
             let pSWAP = configuracion.particiones[3].particionSWAP;
             let pEFI = configuracion.particiones[0].particionEFI;
             let textoSWAP = 'no_hay_swap';
-            if (pSWAP.activa) textoSWAP = '/dev/sd' + pSWAP.disco + pSWAP.particion;
+            if (pSWAP.activa) textoSWAP = '/dev/' + pSWAP.disco + pSWAP.particion;
             let pSRP = configuracion.particiones[1].particionSRP;
             //Solo SRP sin SRPBACKUP se gestiona en srp.js con la etiqueta ##tcopytoram## que se sustituye por copytoram o nada
             //la variable tcopytoram, y montando la particion SRP en mnt/SRP y mnt/SRPBACKUP, en autorun.js no se precisan cambios.
             //el arranque de system rescue cd se hace en menuavanzado y la generacion de BackUpas con la opcion "copytoram" para que 
             // SRP sea escribible, no es necesario que lo sea en las restauraciones.
-            let pSRPBACKUP = configuracion.particiones[1].particionSRPBACKUP.activa? configuracion.particiones[1].particionSRPBACKUP:configuracion.particiones[1].particionSRP;
-            let tcopytoram = configuracion.particiones[1].particionSRPBACKUP.activa?'':'copytoram ';
+            let pSRPBACKUP = configuracion.particiones[1].particionSRPBACKUP.activa ? configuracion.particiones[1].particionSRPBACKUP : configuracion.particiones[1].particionSRP;
+            let tcopytoram = configuracion.particiones[1].particionSRPBACKUP.activa ? '' : 'copytoram ';
             ///
             let ngrupos = 0;
             [pWin, pMAX, pSWAP].forEach(grupo => {
@@ -650,9 +743,9 @@
                 if (archivo.nombre === 'autorun0') {
                     //El archivo autorun0 se hace todo desde aquí no se usa la plantilla de autorun.js     
                     let aux = `# version: SRP v2.0 #\n\n# Nombre de la particion que contiene los backups y los menus de GRUB;
-BACKUP_DEV="/dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion}"
+BACKUP_DEV="/dev/${pSRPBACKUP.disco + pSRPBACKUP.particion}"
 # SRP_DEV Particion que contiene el sofware de Sytem Rescue CD, que ejercuta los procesos
-SRP_DEV="/dev/sd${pSRP.disco + pSRP.particion}"
+SRP_DEV="/dev/${pSRP.disco + pSRP.particion}"
 # Punto de montaje de la partición que contendrá los backups
 BACKUP_MNT="/mnt/SRPBACKUP"
 # Verificar si el directorio /mnt/backup existe
@@ -692,19 +785,19 @@ NG=${ngrupos}
 G1_MENU="Windows"\n`;
                         if (pResW.activa) {
                             aux += `#------------------------------------------------------------------------------
-G1P1_DEV="/dev/sd${pResW.disco + pResW.particion}"
+G1P1_DEV="/dev/${pResW.disco + pResW.particion}"
 G1P1_LABEL_MENU=""
 G1P1_LABEL="Reservado para el sistema"
 G1P1_FS="ntfs"\n`;
                         }
                         aux += `#------------------------------------------------------------------------------
-G1P2_DEV="/dev/sd${pWin.disco + pWin.particion}"
+G1P2_DEV="/dev/${pWin.disco + pWin.particion}"
 G1P2_LABEL_MENU="Windows"
 G1P2_LABEL="Windows"
 G1P2_FS="ntfs"\n`;
                         if (pResW2.activa) {
                             aux += `#------------------------------------------------------------------------------
-G1P3_DEV="/dev/sd${pResW2.disco + pResW2.particion}"
+G1P3_DEV="/dev/${pResW2.disco + pResW2.particion}"
 G1P3_MENU=""
 G1P3_LABEL="Reservado para el sistema 2"
 G1P3_FS="ntfs"\n`;
@@ -715,7 +808,7 @@ G1P3_FS="ntfs"\n`;
                         aux += `G2_NP=2
 G2_MENU="MAX"
 #------------------------------------------------------------------------------
-G2P1_DEV="/dev/sd${pMAX.disco + pMAX.particion}"
+G2P1_DEV="/dev/${pMAX.disco + pMAX.particion}"
 G2P1_LABEL_MENU="MAX"
 G2P1_LABEL="MAX12"
 G2P1_FS="ext4"
@@ -739,7 +832,7 @@ G2P2_FS="swap"
 ${pEFI.activa ? '' : '#'}G4_NP=1
 ${pEFI.activa ? '' : '#'}G4_MENU="EFI"
 #------------------------------------------------------------------------------
-${pEFI.activa ? '' : '#'}G4P1_DEV="/dev/sd${pEFI.disco + pEFI.particion}"
+${pEFI.activa ? '' : '#'}G4P1_DEV="/dev/${pEFI.disco + pEFI.particion}"
 ${pEFI.activa ? '' : '#'}G4P1_LABEL_MENU="EFI"
 ${pEFI.activa ? '' : '#'}G4P1_LABEL="EFI"
 ${pEFI.activa ? '' : '#'}G4P1_FS="fat32"
@@ -926,10 +1019,10 @@ fi`;
                     };
                 }
                 //solo SRP sin SRPBACKUP se gestiona en srp.js con la etiqueta ##tcopytoram## que se sustituye por copytoram o nada
-                if(['menuavanzado.cfg','menugenewin2.cfg','menugenewinmax2.cfg','menugenemax2.cfg','menugeneEFI2.cfg','menuespecial.cfg']){
-                    let partes=texto.split('##tcopytoram##');
-                    if(partes.length>1){
-                        texto=partes.join(tcopytoram);
+                if (['menuavanzado.cfg', 'menugenewin2.cfg', 'menugenewinmax2.cfg', 'menugenemax2.cfg', 'menugeneEFI2.cfg', 'menuespecial.cfg']) {
+                    let partes = texto.split('##tcopytoram##');
+                    if (partes.length > 1) {
+                        texto = partes.join(tcopytoram);
                     }
                 }
                 ///añadimos el archivo si procede
@@ -967,17 +1060,17 @@ fi`;
 ${pEFI.activa ? '' : '#'}#creamos la carpeta EFI para contener la particion EFI
 ${pEFI.activa ? '' : '#'}mkdir /mnt/EFI
 ${pEFI.activa ? '' : '#'}#montamos la particion EFI en esa carpeta
-${pEFI.activa ? '' : '#'}mount /dev/sd${pEFI.disco + pEFI.particion} /mnt/EFI
+${pEFI.activa ? '' : '#'}mount /dev/${pEFI.disco + pEFI.particion} /mnt/EFI
 
 #creamos la carpeta SRPBACKUP para contener la particion SRPBACKUP
 mkdir /mnt/SRPBACKUP
 #montamos la particion SRPBACKUP en esa carpeta
-mount /dev/sd${pSRPBACKUP.disco + pSRPBACKUP.particion} /mnt/SRPBACKUP
+mount /dev/${pSRPBACKUP.disco + pSRPBACKUP.particion} /mnt/SRPBACKUP
 
 #creamos la carpeta SRP para contener la particion SRP
 mkdir /mnt/SRP
 #montamos la particion SRP en esa carpeta
-mount /dev/sd${pSRP.disco + pSRP.particion} /mnt/SRP`;
+mount /dev/${pSRP.disco + pSRP.particion} /mnt/SRP`;
             folder3.file('Monta' + (pEFI.activa ? 'EFI_' : '') + 'SRPBACUP_SRP.sh', herramienta);
             herramienta = pEFI.activa ? `#!/bin/bash
 
@@ -1087,14 +1180,14 @@ echo "El grupo de trabajo ha sido cambiado a '$nuevo_grupo_trabajo'."`;
                 folder4.file('cambiar_grupo_trabajo.sh', herramienta);
                 //Si solo se usa la particion SRP tanto para SystenRescueCD como para las carpetas coipia1, copia2,
                 //no se crea partición para SRPBACKUP y por tanto no hay que ocultarla.
-                let textoSRPBACKUP='" "/dev/sd' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"'
-                if((pSRP.disco + pSRP.particion)===(pSRPBACKUP.disco + pSRPBACKUP.particion))textoSRPBACKUP='"';
-//                let herraux = ('"/dev/sd' + pSRP.disco + pSRP.particion + '" "/dev/sd' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"');
-                let herraux = ('"/dev/sd' + pSRP.disco + pSRP.particion + textoSRPBACKUP);
+                let textoSRPBACKUP = '" "/dev/' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"'
+                if ((pSRP.disco + pSRP.particion) === (pSRPBACKUP.disco + pSRPBACKUP.particion)) textoSRPBACKUP = '"';
+                //                let herraux = ('"/dev/' + pSRP.disco + pSRP.particion + '" "/dev/' + pSRPBACKUP.disco + pSRPBACKUP.particion + '"');
+                let herraux = ('"/dev/' + pSRP.disco + pSRP.particion + textoSRPBACKUP);
                 if (pWin.activa) {
-                    herraux += (' "/dev/sd' + pWin.disco + pWin.particion + '"');
-                    if (pResW.activa) herraux += (' "/dev/sd' + pResW.disco + pResW.particion + '"');
-                    if (pResW2.activa) herraux += (' "/dev/sd' + pResW2.disco + pResW2.particion + '"');
+                    herraux += (' "/dev/' + pWin.disco + pWin.particion + '"');
+                    if (pResW.activa) herraux += (' "/dev/' + pResW.disco + pResW.particion + '"');
+                    if (pResW2.activa) herraux += (' "/dev/' + pResW2.disco + pResW2.particion + '"');
                 }
 
                 herramienta = `#!/bin/bash
@@ -1162,7 +1255,7 @@ echo "✅ Configuración completada. Las particiones de SRP ${pWin.activa ? 'y  
 # primera la entrada SRP usando la herramienta PonerPrimeraLaEntradaSRPenEFI.sh.
 
 # Crea en el firmware del equipo la entrada SRP apuntando a la carpeta EFI/SRP/grubx64.efi
-efibootmgr --create --disk /dev/sd${pEFI.disco} --part ${pEFI.particion} --label "SRP" --loader '\\EFI\\SRP\\grubx64.efi'`;
+efibootmgr --create --disk /dev/${pEFI.disco} --part ${pEFI.particion} --label "SRP" --loader '\\EFI\\SRP\\grubx64.efi'`;
                 folder5.file('CreaEntradaSRPPostClonado.sh', herramienta);
             }
             herramienta = `#!/bin/bash
@@ -1378,12 +1471,12 @@ if [ -n "$DISPLAY" ]; then
 fi
 
 echo "Entorno correcto. Continuando..."
-umount /dev/sd${pWin.disco}${pWin.particion}
+umount /dev/${pWin.disco}${pWin.particion}
 cd  /run/archiso/bootmnt/autorun
 chmod 755 *
 ./autorun1
 ./autorun6
-mount /dev/sd${pWin.disco}${pWin.particion} /mnt/WIN`;
+mount /dev/${pWin.disco}${pWin.particion} /mnt/WIN`;
                 folder5.file('BackupWin.sh', herramienta);
                 herramienta = `#!/bin/bash
 # Este script permite RESTAURAR WINDOWS, la carpeta desde la que se restaura
@@ -1405,12 +1498,12 @@ if [ -n "$DISPLAY" ]; then
 fi
 
 echo "Entorno correcto. Continuando..."
-umount /dev/sd${pWin.disco}${pWin.particion}
+umount /dev/${pWin.disco}${pWin.particion}
 cd  /run/archiso/bootmnt/autorun
 chmod 755 *
 ./autorun1
 ./autorun4
-mount /dev/sd${pWin.disco}${pWin.particion} /mnt/WIN`;
+mount /dev/${pWin.disco}${pWin.particion} /mnt/WIN`;
                 folder5.file('RestauraWin.sh', herramienta);
             }
             if (pMAX.activa) {
@@ -1434,12 +1527,12 @@ if [ -n "$DISPLAY" ]; then
 fi
 
 echo "Entorno correcto. Continuando..."
-umount /dev/sd${pMAX.disco}${pMAX.particion}
+umount /dev/${pMAX.disco}${pMAX.particion}
 cd  /run/archiso/bootmnt/autorun
 chmod 755 *
 ./autorun1
 ./autorun7
-mount /dev/sd${pMAX.disco}${pMAX.particion} /mnt/MAX`;
+mount /dev/${pMAX.disco}${pMAX.particion} /mnt/MAX`;
                 folder5.file('BackupMax.sh', herramienta);
                 herramienta = `#!/bin/bash
 # Este script permite RESTAURAR MAX, la carpeta desde la que se restaura
@@ -1461,12 +1554,12 @@ if [ -n "$DISPLAY" ]; then
 fi
 
 echo "Entorno correcto. Continuando..."
-umount /dev/sd${pMAX.disco}${pMAX.particion}
+umount /dev/${pMAX.disco}${pMAX.particion}
 cd  /run/archiso/bootmnt/autorun
 chmod 755 *
 ./autorun1
 ./autorun5
-mount /dev/sd${pMAX.disco}${pMAX.particion} /mnt/MAX`;
+mount /dev/${pMAX.disco}${pMAX.particion} /mnt/MAX`;
                 folder5.file('RestauraMax.sh', herramienta);
             }
             let folder6 = zip.folder("herramientas/VirtualBox");
@@ -1498,8 +1591,19 @@ echo "La carpeta compartida con el nombre SRP_HOST en VirtualBox estará montada
                 });
             });
         }
-        const numDisco = (letra) => {
-            switch (letra) {
+        const numDisco = (disco) => {
+            
+            if (namespaces.length >0) {
+                for(i=0;i<namespaces.length;i++){ 
+                    if (namespaces[i].name === disco) {
+                        return i;
+                    }
+                }
+            }else {
+                return 0;
+            }
+            //namespace.filter(d => d.name === disco).map(d => d.numero)[0];
+            /*switch (letra) {
                 case 'a': return 0;
                 case 'b': return 1;
                 case 'c': return 2;
@@ -1508,7 +1612,7 @@ echo "La carpeta compartida con el nombre SRP_HOST en VirtualBox estará montada
                 case 'f': return 5;
                 case 'g': return 6;
                 case 'h': return 7;
-            }
+            }*/
         }
         function reemplazarTexto(inputText, name, replacement) {
             //let inputText = document.getElementById("inputText").value;
