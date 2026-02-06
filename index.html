@@ -104,9 +104,10 @@
             <option value="sda">SATA (sda)</option>
             <option value="nvme0n1">M.2 NVMe (nvme0n1)</option>
         </select><br />
-        Ejecuta la orden: <b>lsblk -J -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID >
-            bloques.json</b> y carga el archivo con el siguiente botón para identificar correctamente los discos y
-        particiones en sistemas con NVMe y SATA.<br />
+        Ejecuta la orden: <b>lsblk -J -o
+            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL > bloques.json</b> y carga
+        el archivo con el siguiente botón para identificar correctamente los discos y
+        particiones en sistemas con NVMe, SATA....<br />
         <input type="file" id="fileInputDisco" accept=".json">
     <div id="discos"></div>
     </p>
@@ -159,9 +160,9 @@
             devices
                 .filter(d => d.type === "disk")   // 👈 namespaces NVMe + discos SATA
                 .forEach((disk, i) => {
-                    discosTotales++;
-                    if(disk.name.startsWith('nvme'))disk.name+='p';//en nvme las particiones se nombran con una p entre el nombre del disco y el número de partición, por ejemplo nvme0n1p1, mientras que en sata es sdax donde x es la letra del disco y el número de partición va justo después sin p, por ejemplo nvem0n1p1 vs sda1, por eso añadimos la p al nombre del disco nvme para luego identificar correctamente las particiones
-                    if(disk.name.startsWith('mmcblk'))disk.name+='p';//en mmcblk ocurre lo mismo que en nvme, las particiones se nombran con una p entre el nombre del disco y el número de partición, por ejemplo mmcblk0p1, mientras que en sata es sdax donde x es la letra del disco y el número de partición va justo después sin p, por ejemplo mmcblk0p1 vs sda1, por eso añadimos la p al nombre del disco mmcblk para luego identificar correctamente las particiones
+                    //discosTotales++;
+                    if (disk.name.startsWith('nvme')) disk.name += 'p';//en nvme las particiones se nombran con una p entre el nombre del disco y el número de partición, por ejemplo nvme0n1p1, mientras que en sata es sdax donde x es la letra del disco y el número de partición va justo después sin p, por ejemplo nvem0n1p1 vs sda1, por eso añadimos la p al nombre del disco nvme para luego identificar correctamente las particiones
+                    if (disk.name.startsWith('mmcblk')) disk.name += 'p';//en mmcblk ocurre lo mismo que en nvme, las particiones se nombran con una p entre el nombre del disco y el número de partición, por ejemplo mmcblk0p1, mientras que en sata es sdax donde x es la letra del disco y el número de partición va justo después sin p, por ejemplo mmcblk0p1 vs sda1, por eso añadimos la p al nombre del disco mmcblk para luego identificar correctamente las particiones
                     namespaces.push(disk);
                     const div = document.createElement("div");
 
@@ -175,7 +176,74 @@
       `;
 
                     if (disk.children) {
-                        disk.children.forEach(p => {
+                        discosTotales++;
+                        disk.children.forEach((p, i) => {
+                            if (i === 0 && discosTotales === 1) {
+                                //si es la primera partición del primer disco, que suele ser la EFI, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                configuracion.particiones[0].particionEFI.disco = disk.name;
+                                configuracion.particiones[0].particionEFI.particion = 1;
+                                configuracion.particiones[0].particionEFI.UUID = p.uuid;
+                                //iniciamos igual por defecto el resto de particiones de la configuracion para que correspondan con una partición real de los discos.
+                                configuracion.particiones[1].particionSRP.disco = disk.name;
+                                configuracion.particiones[1].particionSRP.particion = 1;
+                                configuracion.particiones[1].particionSRP.UUID = p.uuid;
+                                configuracion.particiones[1].particionSRPBACKUP.disco = disk.name;
+                                configuracion.particiones[1].particionSRPBACKUP.particion = 1;
+                                configuracion.particiones[1].particionSRPBACKUP.UUID = p.uuid;
+                                configuracion.particiones[3].particionMAX.disco = disk.name;
+                                configuracion.particiones[3].particionMAX.particion = 1;
+                                configuracion.particiones[3].particionMAX.UUID = p.uuid;
+                                configuracion.particiones[3].particionSWAP.disco = disk.name;
+                                configuracion.particiones[3].particionSWAP.particion = 1;
+                                configuracion.particiones[3].particionSWAP.UUID = p.uuid;
+                                configuracion.particiones[2].particionWIN.disco = disk.name;
+                                configuracion.particiones[2].particionWIN.particion = 1;
+                                configuracion.particiones[2].particionWIN.UUID = p.uuid;
+                                configuracion.particiones[2].particionRES.disco = disk.name;
+                                configuracion.particiones[2].particionRES.particion = 1;
+                                configuracion.particiones[2].particionRES.UUID = p.uuid;
+                                configuracion.particiones[2].particionRES2.disco = disk.name;
+                                configuracion.particiones[2].particionRES2.particion = 1;
+                                configuracion.particiones[2].particionRES2.UUID = p.uuid;
+                            }
+                            if (p.label) {
+                                if (p.label === 'EFI') {
+                                    //si la partición se llama EFI, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                    configuracion.particiones[0].particionEFI.disco = disk.name;
+                                    configuracion.particiones[0].particionEFI.particion = i + 1;
+                                    configuracion.particiones[0].particionEFI.UUID = p.uuid;
+                                } else if (p.label === 'SRP') {
+                                    //si la partición se llama SRP, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                    configuracion.particiones[1].particionSRP.disco = disk.name;
+                                    configuracion.particiones[1].particionSRP.particion = i + 1;
+                                    configuracion.particiones[1].particionSRP.UUID = p.uuid;
+                                } else if (p.label === 'SRPBACKUP') {
+                                    //si la partición se llama SRPBACKUP, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                    configuracion.particiones[1].particionSRPBACKUP.disco = disk.name;
+                                    configuracion.particiones[1].particionSRPBACKUP.particion = i + 1;
+                                    configuracion.particiones[1].particionSRPBACKUP.UUID = p.uuid;
+                                } else if (p.label === 'MAX') {
+                                    //si la partición se llama MAX, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                    configuracion.particiones[3].particionMAX.disco = disk.name;
+                                    configuracion.particiones[3].particionMAX.particion = i + 1;
+                                    configuracion.particiones[3].particionMAX.UUID = p.uuid;
+                                } else if (p.label.toLowerCase() === 'windows') {
+                                    //si la partición se llama Windows, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                    configuracion.particiones[2].particionWIN.disco = disk.name;
+                                    configuracion.particiones[2].particionWIN.particion = i + 1;
+                                    configuracion.particiones[2].particionWIN.UUID = p.uuid;
+                                } else if (p.label === 'WINRE') {
+                                    //si la partición se llama WINRE, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                    configuracion.particiones[2].particionRES.disco = disk.name;
+                                    configuracion.particiones[2].particionRES.particion = i + 1;
+                                    configuracion.particiones[2].particionRES.UUID = p.uuid;
+                                } else if (p.label === 'reservado para el sistema') {
+                                    //si la partición se llama reservado para el sistema, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                    configuracion.particiones[2].particionRES.disco = disk.name;
+                                    configuracion.particiones[2].particionRES.particion = i + 1;
+                                    configuracion.particiones[2].particionRES.UUID = p.uuid;
+                                }
+                            }
                             const pDiv = document.createElement("div");
                             pDiv.textContent = `↳ ${p.name} (${p.fstype || "sin FS"}) - ${p.size} - ${p.mountpoint || "no montada"} - ${p.uuid || "sin UUID"} - ${p.partuuid || "sin PARTUUID"}`;
                             div.appendChild(pDiv);
@@ -497,7 +565,7 @@
                         if (namespaces.length > 0 && particion[clave].disco === disco) {
                             //alert(disco)
                             let numOption = 0;
-                            let particionDiscoUUID='';
+                            let particionDiscoUUID = '';
                             namespaces.filter(d => d.name === disco)[0].children.forEach((p, i) => {
                                 //alert(JSON.stringify(p));
                                 particionDiscoUUID = p.uuid;
@@ -508,9 +576,9 @@
                                 select.appendChild(option);
                                 numOption++;
                             });
-                            if(numOption===1){
+                            if (numOption === 1) {
                                 particion[clave].UUID = particionDiscoUUID;
-                                 particion[clave].particion = 1;
+                                particion[clave].particion = 1;
                             }
                         }
                     });
@@ -521,10 +589,10 @@
                         //if(configuracion.usarUUID) alert('Si ha cambiado el disco y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
                         particion[clave].UUID = null;
                         label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
-                        let iAc=indexActual, tabAc=tabActual;
+                        let iAc = indexActual, tabAc = tabActual;
                         actualizarDiscos();
                         mostrarMenu(iAc, tabAc);
-                       
+
                     };
 
                     let checkbox = document.createElement("input");
@@ -536,8 +604,9 @@
                         document.getElementById("error").innerText = '';
                         //if(configuracion.usarUUID) alert('Si ha cambiado la partición y está usando UUIDs, debe volver a cargar el archivo particiones.txt para actualizar las UUIDs asignadas.');
                         particion[clave].UUID = null;
-                        if(namespaces.length>0){//alert(particion[clave].disco+select.value+'-'+particion[clave].disco+JSON.stringify(namespaces.filter(d => d.name === particion[clave].disco)[0].children.filter(p => p.name === particion[clave].disco+select.value)[0]));//si hay namespaces asignamos el disco al cambiar la particion porque en nvme el numero de particion no es fijo para cada disco
-                        particion[clave].UUID = namespaces.filter(d => d.name === particion[clave].disco)[0].children.filter(p => p.name === particion[clave].disco+select.value)[0].uuid;}
+                        if (namespaces.length > 0) {//alert(particion[clave].disco+select.value+'-'+particion[clave].disco+JSON.stringify(namespaces.filter(d => d.name === particion[clave].disco)[0].children.filter(p => p.name === particion[clave].disco+select.value)[0]));//si hay namespaces asignamos el disco al cambiar la particion porque en nvme el numero de particion no es fijo para cada disco
+                            particion[clave].UUID = namespaces.filter(d => d.name === particion[clave].disco)[0].children.filter(p => p.name === particion[clave].disco + select.value)[0].uuid;
+                        }
                         label2.innerText = particion[clave].UUID ? ' UUID: ' + particion[clave].UUID : ' UUID: (no asignada)';
                     }
                     checkbox.onchange = () => {
@@ -594,7 +663,8 @@
             menu.classList.add("visible");
         }
 
-        function comprobarErrores() {alert(JSON.stringify(configuracion));
+        function comprobarErrores() {
+            alert(JSON.stringify(configuracion));
             let recuerdaCargarUUIDs = '';
             document.getElementById("cargarConfResultado").style.visibility = 'hidden';
             if (configuracion.usarUUID && !seHaCargadoUUIDsFile) {
@@ -633,7 +703,7 @@
 
             let efi = configuracion.particiones.find(p => p.nombre === "EFI");
             if (efi && efi.particionEFI.disco !== namespaces[0].name/*'a'*/) {
-                errorMsg += "Error: La partición EFI debe estar en el disco '"+namespaces[0].name+"'.\n";
+                errorMsg += "Error: La partición EFI debe estar en el disco '" + namespaces[0].name + "'.\n";
             }
             if (!estaEncriptada) generatePBKDF2();//solo si no se ha encriptado previamente se lanza
             //comprobamos que si usammos windows legacy esta activada la primera particion de recuperacion
@@ -1592,14 +1662,14 @@ echo "La carpeta compartida con el nombre SRP_HOST en VirtualBox estará montada
             });
         }
         const numDisco = (disco) => {
-            
-            if (namespaces.length >0) {
-                for(i=0;i<namespaces.length;i++){ 
+
+            if (namespaces.length > 0) {
+                for (i = 0; i < namespaces.length; i++) {
                     if (namespaces[i].name === disco) {
                         return i;
                     }
                 }
-            }else {
+            } else {
                 return 0;
             }
             //namespace.filter(d => d.name === disco).map(d => d.numero)[0];
