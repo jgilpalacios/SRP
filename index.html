@@ -77,15 +77,22 @@
 
 <body>
     <h1>Gestor de Particiones</h1>
-    <p><label for="numDiscos">Número de discos:</label>
+    <hr>
+    <p><span style="visibility: hidden;"><label for="numDiscos">Número de discos:</label>
         <select id="numDiscos" onchange="actualizarDiscos()">
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="3">3</option>
-            <option value="4">4</option>
-        </select>
+            <option value="4" selected>4</option>
+        </select></span>TRAS HABER CREADO Y CONFIGURADO LAS PARTICIONES NECESARIAS CON GPARTED<br/>
+        Abre una consola en el escritorio y ejecuta la orden:<br/>
+         <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lsblk -J -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL > bloques.json</b><br/>
+        y carga el archivo <u>bloques.json</u> con el siguiente botón <u>para identificar correctamente los discos y particiones</u> en sistemas con NVMe, SATA.... <u>y cargarlos en el configurador</u><br />
+        <input type="file" id="fileInputDisco" accept=".json"><hr>
+   
+    
         <!-- Botón visible que abre el input oculto -->
-        <button id="selectBtn">Cargar configuración.txt</button>
+        Si ya configuraste un equipo y quieres repetir su configuraciónen otro:<button id="selectBtn">Cargar configuración.txt</button>
 
         <!-- input de archivo oculto (acepta .txt). No forzará nombre, por eso verificamos en JS -->
         <input id="fileInput" type="file" accept=".txt,text/plain" style="display:none" />
@@ -99,18 +106,7 @@
             <button id="selectPartBtn">Buscar particiones.txt</button>
             <input id="partFileInput" type="file" accept=".txt,text/plain" style="display:none" /></span>
     </p>
-    <p>Tipo de discos:<br />
-        disco1:<select id="tipoDisco1">
-            <option value="sda">SATA (sda)</option>
-            <option value="nvme0n1">M.2 NVMe (nvme0n1)</option>
-        </select><br />
-        Ejecuta la orden: <b>lsblk -J -o
-            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL > bloques.json</b> y carga
-        el archivo con el siguiente botón para identificar correctamente los discos y
-        particiones en sistemas con NVMe, SATA....<br />
-        <input type="file" id="fileInputDisco" accept=".json">
-    <div id="discos"></div>
-    </p>
+    
 
     <div class="tabs" id="tabs"></div>
     <div id="menu" class="menu"></div>
@@ -120,6 +116,7 @@
     <h4>Info: <a href="https://jgilpalacios.neocities.org/SRP/info/"
             target="_blank">https://jgilpalacios.neocities.org/SRP/info/</a></h4>
     <p id="error"></p>
+    <div id="discos"></div>
     <!--Parseador-->
     <span id="cargarConfResultado" style="visibility: hidden;">
         <p>Estado: <span id="status">No hay archivo seleccionado</span></p>
@@ -132,7 +129,7 @@
         let seHaCargadoUUIDsFile = false;
         let configuracion = {
             users: [{ nombre: 'madrid', pass: 'cmadrid', enc: false }, { nombre: 'consejeria', pass: 'cconsejeria', enc: true }],
-            nDiscos: 1,
+            nDiscos: 4,
             particiones: [
                 { nombre: 'EFI', particionEFI: { disco: 'sda', particion: 1, activa: true } },
                 { nombre: 'SRP', particionSRP: { disco: 'sda', particion: 7, activa: true }, particionSRPBACKUP: { disco: 'sda', particion: 8, activa: true } },
@@ -244,6 +241,12 @@
                                     configuracion.particiones[2].particionRES.UUID = p.uuid;
                                 }
                             }
+                            if(p.fstype && p.fstype.toLowerCase().includes('swap')) {
+                                //si la partición es de tipo swap, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                configuracion.particiones[3].particionSWAP.disco = disk.name;
+                                configuracion.particiones[3].particionSWAP.particion = i + 1;
+                                configuracion.particiones[3].particionSWAP.UUID = p.uuid;
+                            }
                             const pDiv = document.createElement("div");
                             pDiv.textContent = `↳ ${p.name} (${p.fstype || "sin FS"}) - ${p.size} - ${p.mountpoint || "no montada"} - ${p.uuid || "sin UUID"} - ${p.partuuid || "sin PARTUUID"}`;
                             div.appendChild(pDiv);
@@ -253,8 +256,11 @@
                     cont.appendChild(div);
                 });
             configuracion.nDiscos = discosTotales;
+            document.getElementById("chkUUID").checked = true;
+            configuracion.usarUUID = true;
+            seHaCargadoUUIDsFile = true;
             cargarTabs();
-            alert(JSON.stringify(namespaces));
+            //alert(JSON.stringify(namespaces));
         }
 
 
@@ -318,9 +324,44 @@
 
             // parsear, dividir por líneas, JSON.parse, etc. según formato de tu archivo
             configuracion = JSON.parse(texto);
+            alert(JSON.stringify(configuracion));
+            if(configuracion.particiones[0].particionEFI.activa){
+               discosDesdeConfiguracion.push(configuracion.particiones[0].particionEFI.disco); 
+            }
+            let aux=configuracion.particiones[1].particionSRP.disco;
+            if(discosDesdeConfiguracion.indexOf(aux)===-1){
+                discosDesdeConfiguracion.push(aux);
+            }
+            aux=configuracion.particiones[1].particionSRPBACKUP.disco;
+            if(configuracion.particiones[1].particionSRPBACKUP.activa && discosDesdeConfiguracion.indexOf(aux)===-1){
+                discosDesdeConfiguracion.push(aux);
+            }
+            aux=configuracion.particiones[2].particionWIN.disco;
+            if(configuracion.particiones[2].particionWIN.activa && discosDesdeConfiguracion.indexOf(aux)===-1){
+                discosDesdeConfiguracion.push(aux);
+            }
+            aux=configuracion.particiones[2].particionRES.disco;
+            if(configuracion.particiones[2].particionRES.activa && discosDesdeConfiguracion.indexOf(aux)===-1){
+                discosDesdeConfiguracion.push(aux);
+            }
+            aux=configuracion.particiones[2].particionRES2.disco;
+            if(configuracion.particiones[2].particionRES2.activa && discosDesdeConfiguracion.indexOf(aux)===-1){
+                discosDesdeConfiguracion.push(aux);
+            }
+            aux=configuracion.particiones[3].particionMAX.disco;
+            if(configuracion.particiones[3].particionMAX.activa && discosDesdeConfiguracion.indexOf(aux)===-1){
+                discosDesdeConfiguracion.push(aux);
+            }
+            aux=configuracion.particiones[3].particionSWAP.disco;
+            if(configuracion.particiones[3].particionSWAP.activa && discosDesdeConfiguracion.indexOf(aux)===-1){
+                discosDesdeConfiguracion.push(aux);
+            }
+            discosDesdeConfiguracion.sort();
+            configuracion.nDiscos = discosDesdeConfiguracion.length;
             cargarTabs();
             console.log('Procesando configuración:', texto);
         }
+        let discosDesdeConfiguracion = [];
         ////Asignamos las UUID de las particiones desde el archivo particiones.txt
         const selectPartBtn = document.getElementById('selectPartBtn');
         const partFileInput = document.getElementById('partFileInput');
@@ -554,6 +595,7 @@
 
                     let discoSelect = document.createElement("select");
                     let discos = ['sda', 'sdb', 'sdc', 'sdd'].slice(0, configuracion.nDiscos);
+                    if(discosDesdeConfiguracion.length>0) discos=discosDesdeConfiguracion;//si se han cargado los discos desde la configuración, se muestran sólo esos discos en los select para asignar las particiones, aunque si se han cargado los bloques.json con los namespaces de los discos nvme, se mostrarán sólo los discos que haya en el bloque json para asignar las particiones, ya que para asignar correctamente las UUIDs a cada partición es necesario que el nombre del disco y el número de partición correspondan exactamente con los que hay en el bloque json, por ejemplo nvme0n1p1 para la partición 1 del disco nvme0n1, y si se muestran más discos en el select que no correspondan con los del bloque json, al asignar una partición a un disco que no corresponda con el bloque json esa partición no tendrá asignada correctamente su UUID aunque el nombre del disco y el número de partición sean correctos, por ejemplo si se muestra en el select un disco sda que no corresponde con ningún disco del bloque json y se asigna la partición 1 a ese disco sda, esa partición no tendrá asignada su UUID aunque se llame sda1 porque en el bloque json no hay ningún disco sda ni ninguna partición sda1, mientras que si se muestra en el select sólo los discos que corresponden con el bloque json y se asigna la partición 1 al disco nvme0n1 que sí corresponde con un disco del bloque json y tiene una partición nvme0n1p1 que corresponde con la partición 1 del disco nvme0n1, esa partición sí tendrá asignada su UUID correctamente.
                     if (namespaces.length > 0) discos = namespaces.map(d => d.name);
                     discos.forEach(disco => {
                         let option = document.createElement("option");
@@ -664,7 +706,7 @@
         }
 
         function comprobarErrores() {
-            alert(JSON.stringify(configuracion));
+            //alert(JSON.stringify(configuracion));
             let recuerdaCargarUUIDs = '';
             document.getElementById("cargarConfResultado").style.visibility = 'hidden';
             if (configuracion.usarUUID && !seHaCargadoUUIDsFile) {
@@ -682,6 +724,7 @@
                         let id = particion[clave].disco + particion[clave].particion;
                         if (particion[clave].activa) {
                             if (activas.has(id)) {
+                                //alert(JSON.stringify(particion)+'\n'+JSON.stringify(activas));
                                 errorMsg += `Conflicto: La partición ${id} está duplicada.\n`;
                             }
                             activas.add(id);
@@ -702,7 +745,7 @@
             });
 
             let efi = configuracion.particiones.find(p => p.nombre === "EFI");
-            if (efi && efi.particionEFI.disco !== namespaces[0].name/*'a'*/) {
+            if (efi.activa && namespaces.length>0 && efi.particionEFI.disco !== namespaces[0].name/*'a'*/) {
                 errorMsg += "Error: La partición EFI debe estar en el disco '" + namespaces[0].name + "'.\n";
             }
             if (!estaEncriptada) generatePBKDF2();//solo si no se ha encriptado previamente se lanza
@@ -744,6 +787,7 @@
             //alert(errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion));
             errorMsg = recuerdaCargarUUIDs + errorMsg;
             document.getElementById("error").innerText = errorMsg || "Configuración válida.\n" + JSON.stringify(configuracion);
+            document.getElementById('discos').innerText = '';
             return errorMsg === '';
         }
 
