@@ -606,6 +606,26 @@
                     nuestras necesidades de número de discos y las particiones concretas, así como las contraseñas
                     iniciales de los dos usuarios que permite gestionar las opciones avanzadas de los menús, para el
                     esquema que hemos generado con gparted seria:</p>
+                <p style="text-align: justify;">
+                    Lo más cómodo en la versión más actualizada del entorno que se ha adaptado a discos M2 es, con el
+                    explorador de archivos, abrir la carpeta 'Desktop' y dentro de esa carpeta abrir una terminal de
+                    comandos y en esa terminal ejecutar la orden que nos propone el propio Gestor de particiones:
+
+                <ul>
+                    <li><b>lsblk -J -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL
+                            > bloques.json</b></li>
+                </ul>
+
+                Esta orden nos genera el archivo 'bloques.json' en la carpeta escritorio que tiene toda la información
+                de los discos y particiones que ya configuramos con gparted y que por tanto es la información que
+                tenemos que incluir en el configurador. Al pulsar el botón 'Examinar' deberemos ir al escritorio y
+                seleccionar 'bloques.json' y al cargarlo automáticamente se cargarán los menús con la información
+                adaptada. Tan solo tendremos que ir repasando cada pestaña y chequeando que sea la que indicamos en
+                gparted para cada partición y en cuanto la hayamos dejado correcta, se puede hacer un chequeo adicional
+                pulsando el botón "Comprobación", si nos indicara algún error deberíamos revisarlo y finalmente cuando
+                estuviera todo correcto pulsando el botón "Descargar SRP.zip" obtendríamos el archivo con el SRP
+                adaptado a nuestro equipo, a continuación iríamos al paso siguiente (Paso 6).
+                </p>
                 <p style="text-align: justify;">Número de discos 1 y en la pestaña EFI se seleccionaría sda1 como para
                     la particion efi filesystem fat32 que quedó con gparted, (en un disco con arranque Legacy no exite
                     EFI y para indicarlo desmarcariamos la casilla de chequeo, al estar desmarcada no se tiene en cuenta
@@ -719,9 +739,15 @@
                     nombre por ejemplo "cd" dentro de la carpeta /mnt/ y procedemos a montarla en la consola tecleando
                     el comando:<strong> mount /dev/sr0 /mnt/cd</strong></p>
                 <p style="text-align: justify;">En ese momento la carpeta /mnt/cd contiene los archivos del DVD,
-                    entramos en ella seleccionamos todas sus carpetas (<b>EXCEPTO LA CARPETA boot</b>)  y las llevamos a la carpeta /mnt/SRP con lo que se
+                    entramos en ella seleccionamos todas sus carpetas (<b>EXCEPTO LA CARPETA boot</b>) y las llevamos a
+                    la carpeta /mnt/SRP con lo que se
                     copiara el contenido completo del CD a dicha partición.</p>
-                <p style="text-align: justify;">Si se copia la carpeta boot, cuando se intente arrancar con DVD/pen con versiones diferentes de SystemRescueCD se producirá un error de arranque pues por no coincidir la versión, pues puede pasar que en lugar de leer los archivos de boot del DVD/pen los lea de la particion SRP/boot. Si no están no puede leerlos y los leerá del DVD/pen que es lo correcto. (El archivo que ocasiona el problema es /boot/grub/grubsrcd.cfg, pero realmente no necesita ninguno de esa carpeta por lo que es mejor no copiarla)</p>    
+                <p style="text-align: justify;">Si se copia la carpeta boot, cuando se intente arrancar con DVD/pen con
+                    versiones diferentes de SystemRescueCD se producirá un error de arranque pues por no coincidir la
+                    versión, pues puede pasar que en lugar de leer los archivos de boot del DVD/pen los lea de la
+                    particion SRP/boot. Si no están no puede leerlos y los leerá del DVD/pen que es lo correcto. (El
+                    archivo que ocasiona el problema es /boot/grub/grubsrcd.cfg, pero realmente no necesita ninguno de
+                    esa carpeta por lo que es mejor no copiarla)</p>
                 <p style="text-align: justify;">En /mnt/SRP tendremos ahora, entre otras, la carpeta autorun pero estará
                     vacía, la llenaremos llevando a /mnt/SRP la carpeta autorun que tenemos dentro de la carpeta srp del
                     escritorio (obtenida al descoprimir srp.zip).</p>
