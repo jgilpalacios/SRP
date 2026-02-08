@@ -155,9 +155,11 @@
         });
         let namespaces = [];
         function procesarBloques(devices) {
+            namespaces = [];//reiniciamos el array de namespaces para que luego al cargar los discos desde el archivo bloques.json sólo se muestren los discos que correspondan con los de la configuración cargada, aunque si no se ha cargado el archivo bloques.json se mostrarán todos los discos igual que antes.
             const cont = document.getElementById("discos");
             cont.innerHTML = "";
             let discosTotales = 0;
+            let yaEstaEfiAsignada = false;
             devices
                 .filter(d => d.type === "disk")   // 👈 namespaces NVMe + discos SATA
                 .forEach((disk, i) => {
@@ -208,11 +210,12 @@
                                 configuracion.particiones[2].particionRES2.UUID = p.uuid;
                             }
                             if (p.label) {
-                                if (p.label === 'EFI') {
+                                if (p.label === 'EFI'&& !yaEstaEfiAsignada) {
                                     //si la partición se llama EFI, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
                                     configuracion.particiones[0].particionEFI.disco = disk.name;
                                     configuracion.particiones[0].particionEFI.particion = i + 1;
                                     configuracion.particiones[0].particionEFI.UUID = p.uuid;
+                                    yaEstaEfiAsignada = true;
                                 } else if (p.label === 'SRP') {
                                     //si la partición se llama SRP, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
                                     configuracion.particiones[1].particionSRP.disco = disk.name;
@@ -259,6 +262,7 @@
 
                     cont.appendChild(div);
                 });
+            discosDesdeConfiguracion = [];//reiniciamos el array de discos desde configuración para que luego al cargar los bloques.json con los namespaces de los discos nvme, se muestren sólo los discos que correspondan con los de la configuración cargada, aunque si no se ha cargado el archivo bloques.json se mostrarán todos los discos igual que antes.
             configuracion.nDiscos = discosTotales;
             document.getElementById("chkUUID").checked = true;
             configuracion.usarUUID = true;
@@ -362,6 +366,7 @@
             }
             discosDesdeConfiguracion.sort();
             configuracion.nDiscos = discosDesdeConfiguracion.length;
+            namespaces=[];//limpiamos el array de namespaces para que luego al cargar los discos desde el archivo bloques.json sólo se muestren los discos que correspondan con los de la configuración cargada, aunque si no se ha cargado el archivo bloques.json se mostrarán todos los discos igual que antes.
             cargarTabs();
             console.log('Procesando configuración:', texto);
         }
@@ -588,7 +593,7 @@
                     let select = document.createElement("select");
 
                     if (namespaces.length === 0) {
-                        for (let i = 1; i <= 9; i++) {
+                        for (let i = 1; i <= 20; i++) {
                             let option = document.createElement("option");
                             option.value = i;
                             option.innerText = i;
