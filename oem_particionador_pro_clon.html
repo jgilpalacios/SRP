@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>OEM GPT Partition Tool PRO</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #f4f6f8;
+            margin: 20px
+        }
+
+        .disk {
+            background: white;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08)
+        }
+
+        svg {
+            width: 100%;
+            height: 55px;
+            margin-bottom: 10px
+        }
+
+        .partition-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px
+        }
+
+        .new-part {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+            align-items: center
+        }
+
+        button {
+            padding: 6px 12px;
+            margin-top: 10px;
+            cursor: pointer
+        }
+
+        .free-info {
+            font-weight: bold;
+            margin-left: 10px
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>OEM GPT Partition Tool PRO</h2>
+    <p>Abre una consola en el escritorio y ejecuta la orden:<br>
+        <b>lsblk -J -b -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL >
+            bloques.json</b>
+        <br>y carga el archivo bloques.json
+    </p>
+    <input type="file" id="fileInput">
+    <div id="disks"></div>
+    <button onclick="generateScript()">Generar Script OEM</button>
+    <button onclick="generateCloneScriptUNO()">Generar Script CLON con UUIDs</button>
+    <script>
+        //para clonar
+        let originalState = null
+        let clonedState = null
+        //fin para clonar
+
+        let data
+        let selected = null
+        let newParts = {}
+
+        // ---------------- UTILIDADES ----------------
+
+        function bytesToMiB(b) { return Math.floor(b / 1024 / 1024) }
+
+        function getSeparator(name) {
+            if (name.startsWith("nvme") || name.startsWith("mmc"))
+                return "p"
+            return ""
+        }
+
+        function getLastPartNumber(disk) {
+            if (!disk.children) return 0
+            let nums = disk.children.map(p => {
+                const m = p.name.match(/(\d+)$/)
+                return m ? parseInt(m[1]) : 0
+            })
+            return Math.max(...nums)
+        }
+
+        function getFsColor(fs) {
+            switch (fs) {
+                case "ext4": return "#4CAF50"
+                case "ntfs": return "#2196F3"
+                case "vfat": return "#FF9800"
+                case "swap": return "#9C27B0"
+                default: return "#9E9E9E"
+            }
+        }
+
+        function drawRect(svg, x, width, fill, stroke) {
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+            rect.setAttribute("x", x + "%")
+            rect.setAttribute("width", width + "%")
+            rect.setAttribute("height", "40")
+            rect.setAttribute("rx", "8")
+            rect.setAttribute("ry", "8")
+            rect.setAttribute("fill", fill)
+            rect.setAttribute("stroke", stroke)
+            rect.setAttribute("stroke-width", "2")
+            svg.appendChild(rect)
+        }
+
+        // ---------------- CARGA ----------------
+
+        document.getElementById("fileInput").addEventListener("change", e => {
+            const reader = new FileReader()
+            reader.onload = evt => {
+                data = JSON.parse(evt.target.result)
+                render()
+            }
+            reader.readAsText(e.target.files[0])
+        })
+
+        // ---------------- RENDER ----------------
+        let maxSize = 0;
+        function render() {
+            const container = document.getElementById("disks")
+            container.innerHTML = ""
+
+            data.blockdevices.forEach(disk => {
+                if (disk.type !== "disk") return
+
+                const diskDiv = document.createElement("div")
+                diskDiv.className = "disk"
+
+                diskDiv.innerHTML = `<h3>${disk.path} (${bytesToMiB(disk.size)} MiB)</h3>`
+
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+                svg.setAttribute("data-disk", disk.name)
+                diskDiv.appendChild(svg)
+
+                disk.children?.forEach(part => {
+                    const sizeMiB = bytesToMiB(part.size)
+
+                    const row = document.createElement("div")
+                    row.className = "partition-row"
+
+                    row.innerHTML = `
+        <input type="radio" name="resize-${disk.name}">
+        ${part.path} (${part.fstype || "sin fs"}) ${sizeMiB} MiB
+        <span style="display:none">
+          Nuevo tamaño MiB:
+          <input type="number" min="1" style="width:80px">
+          <span class="free-info"></span>
+        </span>
+      `
+
+                    const radio = row.querySelector("input")
+                    const span = row.querySelector("span")
+                    span.setAttribute("disco", disk.name)
+                    const input = row.querySelector("input[type=number]")
+                    const info = row.querySelector(".free-info")
+
+                    //radio.addEventListener("change", () => {
+                    radio.addEventListener("click", () => {
+                        document.querySelectorAll(".partition-row span").forEach(s => {
+                            if (s.getAttribute("disco") === disk.name)
+                                s.style.display = "none"
+                        })
+                        span.style.display = "inline"
+                        selected = { disk, part, input }
+                        redrawDisk(disk)
+                    })
+
+                    input.addEventListener("input", () => {
+                        const free = sizeMiB - parseInt(input.value || 0)
+                        if (free < 0) {
+                            info.textContent = "⚠ Excede tamaño"
+                            info.style.color = "red"
+                        } else {
+                            info.textContent = `Libre: ${free} MiB`
+                            info.style.color = "green"
+                        }
+                        redrawDisk(disk)
+                    })
+
+                    diskDiv.appendChild(row)
+                })
+
+                const addBtn = document.createElement("button")
+                addBtn.textContent = "+ Añadir partición"
+                addBtn.onclick = () => addPartition(disk, diskDiv)
+
+                diskDiv.appendChild(addBtn)
+                container.appendChild(diskDiv)
+
+                redrawDisk(disk)
+            })
+        }
+
+        // ---------------- REDIBUJAR SVG ----------------
+
+        function redrawDisk(disk) {
+
+            const svg = document.querySelector(`svg[data-disk='${disk.name}']`)
+            if (!svg) return
+
+            svg.innerHTML = ""
+
+            const totalMiB = bytesToMiB(disk.size)
+            if (maxSize < totalMiB) maxSize = totalMiB;
+            let xPercent = 0
+
+            const selectedPart = selected?.disk?.name === disk.name ? selected.part : null
+            const newSize = selected?.input ? parseInt(selected.input.value || 0) : null
+            let Hasta100 = 100;
+            let freed = 0;
+            let ocupado = 0;
+            disk.children?.forEach(part => {
+                let sizeMiB = bytesToMiB(part.size)
+                if (selectedPart && part.name === selectedPart.name && newSize) {
+                    sizeMiB = newSize
+                }
+                const percent = Math.floor(sizeMiB / maxSize * 100)
+                if (percent < 1) Hasta100--;
+            })
+
+            disk.children?.forEach(part => {
+
+                let sizeMiB = bytesToMiB(part.size)
+
+                if (selectedPart && part.name === selectedPart.name && newSize) {
+                    sizeMiB = newSize
+                    let percent = Math.floor(sizeMiB / maxSize * Hasta100);
+                    if (percent < 1) percent = 1
+                    drawRect(svg, xPercent, percent, getFsColor(part.fstype), "#222")
+                    xPercent += percent
+                    const np = newParts[disk.name] || [];
+                    let sizeCreadas = 0;
+                    np.forEach((p, i) => {
+                        let size = parseInt(p.element.querySelector("input[type=number]").value || 0)
+                        //let size=parseInt(document.getElementById(`size_${p.element.textContent.trim()}`).value || 0);
+                        //alert(p.element.querySelector("input[type=number]"))
+                        /*alert(disk.name + np[i].num);
+                        let aux=disk.name + np[i].num
+                        if((document.getElementById(`size_${aux}`).value ==='100%')) {
+                            size = bytesToMiB(part.size) - newSize-sizeCreadas;
+                        }*/
+                        sizeCreadas += size;
+                        if (!size) return
+                        let percent = Math.floor(size / maxSize * Hasta100);
+                        if (percent < 1) percent = 1;
+                        ocupado += size;
+                        const fs = p.element.querySelector("select").value
+                        drawRect(svg, xPercent, percent, getFsColor(fs), "red")
+                        xPercent += percent
+                    })
+                    freed = bytesToMiB(part.size) - newSize - ocupado;
+                    if (freed > 0) {
+                        //const freedPercent = (freed / totalMiB) * 100
+                        let freedPercent = Math.floor(freed / maxSize * Hasta100);
+                        if (freedPercent < 1) freedPercent = 1
+                        drawRect(svg, xPercent, freedPercent, "#ffffff", "#999")
+                        xPercent += freedPercent
+                    }
+
+                } else {
+                    //let percent = (sizeMiB / totalMiB) * 100
+                    let percent = Math.floor(sizeMiB / maxSize * Hasta100);
+                    if (percent < 1) percent = 1
+
+                    drawRect(svg, xPercent, percent, getFsColor(part.fstype), "#222")
+                    xPercent += percent
+                    //let freed = 0;
+                    //let ocupado = 0;
+                }
+
+
+
+                /*if (selectedPart && part.name === selectedPart.name && newSize) {
+                    freed = bytesToMiB(part.size) - newSize - ocupado;
+                    if (freed > 0) {
+                        //const freedPercent = (freed / totalMiB) * 100
+                        let freedPercent = Math.floor(freed / maxSize * Hasta100);
+                        if (freedPercent < 1) freedPercent = 1
+                        drawRect(svg, xPercent, freedPercent, "#ffffff", "#999")
+                        xPercent += freedPercent
+                    }
+                }*/
+            })
+
+            /*const np = newParts[disk.name] || []
+            np.forEach(p => {
+                const size = parseInt(p.element.querySelector("input[type=number]").value || 0)
+                if (!size) return
+                let percent = Math.floor(size / maxSize * Hasta100);
+                if (percent < 1) percent = 1;
+                ocupado += size;
+                const fs = p.element.querySelector("select").value
+                drawRect(svg, xPercent, percent, getFsColor(fs), "red")
+                xPercent += percent
+            })*/
+        }
+
+        // ---------------- AÑADIR NUEVA ----------------
+
+        function addPartition(disk, diskDiv) {
+
+            if (!newParts[disk.name]) newParts[disk.name] = []
+
+            const base = getLastPartNumber(disk)
+            const num = base + newParts[disk.name].length + 1
+            const sep = getSeparator(disk.name)
+            const name = disk.path + sep + num
+
+            const div = document.createElement("div")
+            div.className = "new-part"
+
+            div.innerHTML = `
+    ${name}
+    <select>
+      <option>ext4</option>
+      <option>ntfs</option>
+      <option>vfat</option>
+      <option>swap</option>
+    </select>
+    Tamaño MiB:
+    <input type="number" min="1" id="size_${name}" style="width:80px">
+    <!--<input type="text" id="size_${name}" style="width:80px">-->
+    Label:
+    <input type="text">
+    <button type="button">❌</button>
+  `
+
+            const removeBtn = div.querySelector("button")
+            removeBtn.onclick = () => {
+                div.remove()
+                newParts[disk.name] = newParts[disk.name].filter(x => x.element !== div)
+                redrawDisk(disk)
+            }
+
+            div.querySelector("input[type=number]").addEventListener("input", () => redrawDisk(disk))
+            //document.getElementById(`size_${name}`).addEventListener("input", () => redrawDisk(disk))
+            div.querySelector("select").addEventListener("change", () => redrawDisk(disk))
+
+            diskDiv.appendChild(div)
+            newParts[disk.name].push({ num, element: div })
+
+            redrawDisk(disk)
+        }
+
+        // ---------------- GENERAR SCRIPT ----------------
+
+        function generateScript() {
+
+            if (!selected) { alert("Seleccione partición"); return }
+
+            const disk = selected.disk
+            const part = selected.part
+            const newSize = parseInt(selected.input.value)
+
+            if (!newSize) { alert("Indique nuevo tamaño"); return }
+
+            const originalMiB = bytesToMiB(part.size)
+            const freed = originalMiB - newSize
+            if (freed <= 0) { alert("No libera espacio"); return }
+
+            const numMatch = part.name.match(/(\d+)$/)
+            if (!numMatch) { alert("Error número partición"); return }
+            const partNumber = numMatch[1]
+
+            const toCreate = newParts[disk.name] || []
+            let requested = 0
+            toCreate.forEach((p, i) => {
+                if (i !== toCreate.length - 1)
+                    requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
+            })
+
+            if (requested > freed) {
+                alert("Excede espacio disponible")
+                return
+            }
+
+            let script = `#!/bin/bash
+set -euo pipefail
+
+DISK="${disk.path}"
+echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
+parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
+partprobe "$DISK"
+sleep 2
+`
+
+            toCreate.forEach((p, i) => {
+
+                const fs = p.element.querySelector("select").value
+                const size = parseInt(p.element.querySelector("input[type=number]").value || 0)
+                const label = p.element.querySelector("input[type=text]").value
+
+                if (i === toCreate.length - 1) {
+                    script += `\necho "Creando partición final"
+sgdisk -n ${p.num}:0:0 "$DISK"
+`
+                } else {
+                    script += `\necho "Creando partición ${p.num}"
+sgdisk -n ${p.num}:0:+${size}MiB "$DISK"
+`
+                }
+
+                script += `
+partprobe "$DISK"
+sleep 1
+DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
+`
+
+                if (fs === "ext4") script += `mkfs.ext4 -F "$DEV"\n`
+                if (fs === "ntfs") script += `mkfs.ntfs -f "$DEV"\n`
+                if (fs === "vfat") script += `mkfs.vfat -F32 "$DEV"\n`
+                if (fs === "swap") script += `mkswap "$DEV"\n`
+
+                if (label) {
+                    if (fs === "ext4") script += `e2label "$DEV" "${label}"\n`
+                    if (fs === "ntfs") script += `ntfslabel "$DEV" "${label}"\n`
+                    if (fs === "vfat") script += `fatlabel "$DEV" "${label}"\n`
+                    if (fs === "swap") script += `swaplabel -L "${label}" "$DEV"\n`
+                }
+            })
+
+            script += `\necho "FINALIZADO"\n`
+
+            download(script, "oem_partition_script.sh")
+            //para clonar
+            originalState = JSON.parse(JSON.stringify(data))
+            alert("Estado base guardado. Ahora puedes aplicar el script y cargar el nuevo JSON para modo CLON.")
+            //fin para clonar
+        }
+
+        function download(text, name) {
+            const blob = new Blob([text], { type: "text/plain" })
+            const a = document.createElement("a")
+            a.href = URL.createObjectURL(blob)
+            a.download = name
+            a.click()
+        }
+
+        // ---------------- GENERAR SCRIPT CLON ----------------        
+        function generateCloneScriptUNO() {
+
+            if (!originalState) {
+                alert("Primero debes generar el script inicial.")
+                return
+            }
+
+            const input = document.createElement("input")
+            input.type = "file"
+
+            input.onchange = e => {
+
+                const reader = new FileReader()
+                reader.onload = evt => {
+                    ///PARTE DE PRIMERO
+                    const disk = selected.disk
+                    const part = selected.part
+                    const newSize = parseInt(selected.input.value)
+                    const originalMiB = bytesToMiB(part.size)
+                    const freed = originalMiB - newSize
+                    const numMatch = part.name.match(/(\d+)$/)
+                    if (!numMatch) { alert("Error número partición"); return }
+                    const partNumber = numMatch[1]
+                    const toCreate = newParts[disk.name] || []
+                    let requested = 0
+                    toCreate.forEach((p, i) => {
+                        if (i !== toCreate.length - 1)
+                            requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
+                    })
+                    let script = `#!/bin/bash
+set -euo pipefail
+
+echo "Modo CLON OEM"
+
+DISK="${disk.path}"
+echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
+parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
+partprobe "$DISK"
+sleep 2
+
+`
+                    ///FINAL DE PARTE DE PRIMERO
+
+                    clonedState = JSON.parse(evt.target.result)
+
+                    //let script = `#!/bin/bash
+                    //set -euo pipefail
+
+                    script += `#echo "Modo CLON OEM"
+`
+
+                    originalState.blockdevices.forEach(origDisk => {
+
+                        if (origDisk.type !== "disk") return
+
+                        const newDisk = clonedState.blockdevices.find(d => d.name === origDisk.name)
+                        if (!newDisk) return
+
+                        const origParts = origDisk.children?.map(p => p.name) || []
+                        const newParts = newDisk.children || []
+
+                        newParts.forEach(part => {
+
+                            if (!origParts.includes(part.name)) {
+
+                                const numMatch = part.name.match(/(\d+)$/)
+                                if (!numMatch) return
+
+                                const num = numMatch[1]
+                                const sep = getSeparator(newDisk.name)
+
+                                script += `
+if blkid | grep -q "${part.uuid}"; then
+  echo "ERROR: Conflicto UUID ${part.uuid}"
+  exit 1
+fi
+`
+
+                                script += `
+echo "Creando partición ${part.name}"
+#sgdisk -n ${num}:0:0 ${newDisk.path}
+sgdisk -n ${num}:0:+${bytesToMiB(part.size)}MiB ${newDisk.path}
+sgdisk -u ${num}:${part.partuuid} ${newDisk.path}
+partprobe ${newDisk.path}
+sleep 1
+`
+
+                                if (part.fstype === "ext4")
+                                    script += `mkfs.ext4 -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+
+                                if (part.fstype === "ntfs")
+                                    script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+
+                                if (part.fstype === "vfat")
+                                    script += `mkfs.vfat ${newDisk.path}${sep}${num}\nfatlabel ${newDisk.path}${sep}${num} "${part.label || ""}"\n`
+
+                                if (part.fstype === "swap")
+                                    script += `mkswap -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+
+                                if (part.label && part.fstype !== "vfat") {
+                                    if (part.fstype === "ext4")
+                                        script += `e2label ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                    if (part.fstype === "ntfs")
+                                        script += `ntfslabel ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                }
+
+                                /*                                script += `
+                                if blkid | grep -q "${part.uuid}"; then
+                                  echo "ERROR: Conflicto UUID ${part.uuid}"
+                                  exit 1
+                                fi
+                                `*/
+                            }
+                        })
+                    })
+
+                    script += `echo "CLON FINALIZADO"\n`
+
+                    download(script, "oem_clone_script.sh")
+                }
+
+                reader.readAsText(e.target.files[0])
+            }
+
+            input.click()
+        }
+
+
+        // ---------------- GENERAR SCRIPT CLON ----------------        
+        function generateCloneScript() {
+
+            if (!originalState) {
+                alert("Primero debes generar el script inicial.")
+                return
+            }
+
+            const input = document.createElement("input")
+            input.type = "file"
+
+            input.onchange = e => {
+
+                const reader = new FileReader()
+                reader.onload = evt => {
+
+                    clonedState = JSON.parse(evt.target.result)
+
+                    let script = `#!/bin/bash
+set -euo pipefail
+
+echo "Modo CLON OEM"
+`
+
+                    originalState.blockdevices.forEach(origDisk => {
+
+                        if (origDisk.type !== "disk") return
+
+                        const newDisk = clonedState.blockdevices.find(d => d.name === origDisk.name)
+                        if (!newDisk) return
+
+                        const origParts = origDisk.children?.map(p => p.name) || []
+                        const newParts = newDisk.children || []
+
+                        newParts.forEach(part => {
+
+                            if (!origParts.includes(part.name)) {
+
+                                const numMatch = part.name.match(/(\d+)$/)
+                                if (!numMatch) return
+
+                                const num = numMatch[1]
+                                const sep = getSeparator(newDisk.name)
+
+                                script += `
+echo "Creando partición ${part.name}"
+sgdisk -n ${num}:0:0 ${newDisk.path}
+sgdisk -u ${num}:${part.partuuid} ${newDisk.path}
+partprobe ${newDisk.path}
+sleep 1
+`
+
+                                if (part.fstype === "ext4")
+                                    script += `mkfs.ext4 -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+
+                                if (part.fstype === "ntfs")
+                                    script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+
+                                if (part.fstype === "vfat")
+                                    script += `mkfs.vfat ${newDisk.path}${sep}${num}\nfatlabel ${newDisk.path}${sep}${num} "${part.label || ""}"\n`
+
+                                if (part.fstype === "swap")
+                                    script += `mkswap -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+
+                                if (part.label && part.fstype !== "vfat") {
+                                    if (part.fstype === "ext4")
+                                        script += `e2label ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                    if (part.fstype === "ntfs")
+                                        script += `ntfslabel ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                }
+
+                                script += `
+if blkid | grep -q "${part.uuid}"; then
+  echo "ERROR: Conflicto UUID ${part.uuid}"
+  exit 1
+fi
+`
+                            }
+                        })
+                    })
+
+                    script += `echo "CLON FINALIZADO"\n`
+
+                    download(script, "oem_clone_script.sh")
+                }
+
+                reader.readAsText(e.target.files[0])
+            }
+
+            input.click()
+        }
+
+
+    </script>
+</body>
+
+</html>
