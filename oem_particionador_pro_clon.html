@@ -57,7 +57,7 @@
 
     <h2>OEM GPT Partition Tool PRO</h2>
     <p>Abre una consola en el escritorio y ejecuta la orden:<br>
-        <b>lsblk -J -b -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL >
+        <b>lsblk -J -b -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START >
             bloques.json</b>
         <br>y carga el archivo bloques.json
     </p>
@@ -73,6 +73,7 @@
 
         let data
         let selected = null
+        let todosSelected = {};
         let newParts = {}
 
         // ---------------- UTILIDADES ----------------
@@ -104,7 +105,7 @@
             }
         }
 
-        function drawRect(svg, x, width, fill, stroke) {
+        function drawRect(svg, x, width, fill, stroke, strokeWidth = 0) {
             const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
             rect.setAttribute("x", x + "%")
             rect.setAttribute("width", width + "%")
@@ -113,7 +114,7 @@
             rect.setAttribute("ry", "8")
             rect.setAttribute("fill", fill)
             rect.setAttribute("stroke", stroke)
-            rect.setAttribute("stroke-width", "2")
+            rect.setAttribute("stroke-width", strokeWidth)
             svg.appendChild(rect)
         }
 
@@ -122,7 +123,11 @@
         document.getElementById("fileInput").addEventListener("change", e => {
             const reader = new FileReader()
             reader.onload = evt => {
-                data = JSON.parse(evt.target.result)
+                data = JSON.parse(evt.target.result);
+                data.blockdevices.forEach(d => {
+                    if (d.type === "disk" && d.children) 
+                    d.children.sort((a, b) => a.start - b.start)
+                })
                 render()
             }
             reader.readAsText(e.target.files[0])
@@ -176,10 +181,18 @@
                         })
                         span.style.display = "inline"
                         selected = { disk, part, input }
+                        todosSelected[disk.name] = {disk, part, input}
+                        /*newParts[disk.name] = newParts[disk.name].filter(x => x.element !== div)
+                        diskDiv.appendChild(div)
+            newParts[disk.name].push({ num, element: div })*/
+                        alert(JSON.stringify(newParts[disk.name]))
+                        if(newParts[disk.name])newParts[disk.name].forEach(p => p.element.remove())
+                        //div.remove()
+                        newParts[disk.name] = []
                         redrawDisk(disk)
                     })
 
-                    input.addEventListener("input", () => {
+                    input.addEventListener("input", () => {//alert(input.value);
                         const free = sizeMiB - parseInt(input.value || 0)
                         if (free < 0) {
                             info.textContent = "⚠ Excede tamaño"
@@ -230,6 +243,24 @@
                 }
                 const percent = Math.floor(sizeMiB / maxSize * 100)
                 if (percent < 1) Hasta100--;
+                
+            })
+            //let partOcupadaSize=0;
+            let ocupadoAntes = 0;
+            newParts[disk.name]?.forEach((p, i) => {
+                const base = getLastPartNumber(disk)
+                const num = base + i + 1;
+                const sep = getSeparator(disk.name)
+                let name = disk.path + sep + num;
+                let auxSize=document.getElementById(`size_${name}`).value.trim();
+                let size=parseInt(auxSize) || 0;
+                if(auxSize==="100%") {
+                        size = bytesToMiB(selectedPart.size) - newSize - ocupadoAntes;
+                }
+                ocupadoAntes += size;
+                if (!size) return
+                const percent = Math.floor(size / maxSize * 100)
+                if (percent < 1) Hasta100--;
             })
 
             disk.children?.forEach(part => {
@@ -237,6 +268,7 @@
                 let sizeMiB = bytesToMiB(part.size)
 
                 if (selectedPart && part.name === selectedPart.name && newSize) {
+                    //partOcupadaSize = sizeMiB;
                     sizeMiB = newSize
                     let percent = Math.floor(sizeMiB / maxSize * Hasta100);
                     if (percent < 1) percent = 1
@@ -244,9 +276,22 @@
                     xPercent += percent
                     const np = newParts[disk.name] || [];
                     let sizeCreadas = 0;
+                    const base = getLastPartNumber(disk)
+                    let num = 0;
+                    const sep = getSeparator(disk.name)
+                    //let name = disk.path + sep + num;
                     np.forEach((p, i) => {
-                        let size = parseInt(p.element.querySelector("input[type=number]").value || 0)
-                        //let size=parseInt(document.getElementById(`size_${p.element.textContent.trim()}`).value || 0);
+                        num = base + i + 1;
+                        let name = disk.path + sep + num;
+                        //alert(name);
+                        //alert(document.getElementById(`size_${name}`).value)
+                        //alert(p.element.querySelector("input[type=number]").value)
+                        //let size = parseInt(p.element.querySelector("input[type=number]").value || 0)
+                        let auxSize=document.getElementById(`size_${name}`).value.trim();
+                        let size=parseInt(auxSize) || 0;
+                        if(auxSize==="100%") {
+                            size = bytesToMiB(part.size) - newSize - ocupado;
+                        }
                         //alert(p.element.querySelector("input[type=number]"))
                         /*alert(disk.name + np[i].num);
                         let aux=disk.name + np[i].num
@@ -259,7 +304,7 @@
                         if (percent < 1) percent = 1;
                         ocupado += size;
                         const fs = p.element.querySelector("select").value
-                        drawRect(svg, xPercent, percent, getFsColor(fs), "red")
+                        drawRect(svg, xPercent, percent, getFsColor(fs), "red",6)
                         xPercent += percent
                     })
                     freed = bytesToMiB(part.size) - newSize - ocupado;
@@ -267,7 +312,7 @@
                         //const freedPercent = (freed / totalMiB) * 100
                         let freedPercent = Math.floor(freed / maxSize * Hasta100);
                         if (freedPercent < 1) freedPercent = 1
-                        drawRect(svg, xPercent, freedPercent, "#ffffff", "#999")
+                        drawRect(svg, xPercent, freedPercent, "#ffffff", "black"/*"#999"*/,6)
                         xPercent += freedPercent
                     }
 
@@ -332,10 +377,10 @@
       <option>swap</option>
     </select>
     Tamaño MiB:
-    <input type="number" min="1" id="size_${name}" style="width:80px">
-    <!--<input type="text" id="size_${name}" style="width:80px">-->
+    <!--<input type="number" min="1" id="size_${name}" style="width:80px">-->
+    <input type="text" id="size_${name}" style="width:80px">
     Label:
-    <input type="text">
+    <input type="text" id="label_${name}" style="width:100px">
     <button type="button">❌</button>
   `
 
@@ -346,12 +391,20 @@
                 redrawDisk(disk)
             }
 
-            div.querySelector("input[type=number]").addEventListener("input", () => redrawDisk(disk))
-            //document.getElementById(`size_${name}`).addEventListener("input", () => redrawDisk(disk))
+            //div.querySelector("input[type=number]").addEventListener("input", () => redrawDisk(disk))
+            //alert(`size_${name}`)
+            let entradas=div.querySelectorAll("input[type=text]")
+            entradas.forEach(ent => {
+                if(ent.id===`size_${name}`)ent.addEventListener("input", () => redrawDisk(disk))
+            })
+            //.addEventListener("input", () => redrawDisk(disk))
+            //div.getElementById(`size_${name}`).addEventListener("input", () => redrawDisk(disk))
             div.querySelector("select").addEventListener("change", () => redrawDisk(disk))
 
             diskDiv.appendChild(div)
+            alert(div)
             newParts[disk.name].push({ num, element: div })
+            alert('se añaden: '+JSON.stringify(newParts[disk.name]))
 
             redrawDisk(disk)
         }
@@ -359,28 +412,37 @@
         // ---------------- GENERAR SCRIPT ----------------
 
         function generateScript() {
+            //todosSelected[disk.name] = {disk, part, input}
+            let script = `#!/bin/bash
+set -euo pipefail`;
+            for(let key in todosSelected) { 
+                alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
+                selected = todosSelected[key];
+                if (!selected) { alert("Seleccione partición"); return }
 
-            if (!selected) { alert("Seleccione partición"); return }
-
-            const disk = selected.disk
-            const part = selected.part
-            const newSize = parseInt(selected.input.value)
+            let disk = selected.disk
+            let part = selected.part
+            let newSize = parseInt(selected.input.value)
 
             if (!newSize) { alert("Indique nuevo tamaño"); return }
 
-            const originalMiB = bytesToMiB(part.size)
-            const freed = originalMiB - newSize
+            let originalMiB = bytesToMiB(part.size)
+            let freed = originalMiB - newSize
             if (freed <= 0) { alert("No libera espacio"); return }
 
-            const numMatch = part.name.match(/(\d+)$/)
+            let numMatch = part.name.match(/(\d+)$/)
             if (!numMatch) { alert("Error número partición"); return }
-            const partNumber = numMatch[1]
-
-            const toCreate = newParts[disk.name] || []
+            let partNumber = numMatch[1]
+            //alert(JSON.stringify(newParts[disk.name]))
+            alert(part.name+'++'+partNumber+'++'+newSize+'++'+freed+'--'+disk.name+'--'+getSeparator(disk.name))
+            let toCreate = newParts[disk.name] || []
             let requested = 0
             toCreate.forEach((p, i) => {
+                
                 if (i !== toCreate.length - 1)
-                    requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
+                    alert(disk.path+'..'+`size_${disk.name + getSeparator(disk.name)+ p.num}`)
+                    requested += parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
+                    //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
             })
 
             if (requested > freed) {
@@ -388,9 +450,8 @@
                 return
             }
 
-            let script = `#!/bin/bash
-set -euo pipefail
-
+            
+script +=`
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
 parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
@@ -401,9 +462,9 @@ sleep 2
             toCreate.forEach((p, i) => {
 
                 const fs = p.element.querySelector("select").value
-                const size = parseInt(p.element.querySelector("input[type=number]").value || 0)
-                const label = p.element.querySelector("input[type=text]").value
-
+                const size = parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
+                const label = document.getElementById(`label_${disk.path + getSeparator(disk.name) + p.num}`).value.trim() //
+                
                 if (i === toCreate.length - 1) {
                     script += `\necho "Creando partición final"
 sgdisk -n ${p.num}:0:0 "$DISK"
@@ -432,7 +493,7 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
                     if (fs === "swap") script += `swaplabel -L "${label}" "$DEV"\n`
                 }
             })
-
+        }
             script += `\necho "FINALIZADO"\n`
 
             download(script, "oem_partition_script.sh")
