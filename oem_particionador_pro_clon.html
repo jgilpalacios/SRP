@@ -57,7 +57,7 @@
 
     <h2>OEM GPT Partition Tool PRO</h2>
     <p>Abre una consola en el escritorio y ejecuta la orden:<br>
-        <b>lsblk -J -b -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START >
+        <b>lsblk -J -b -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC >
             bloques.json</b>
         <br>y carga el archivo bloques.json
     </p>
@@ -415,6 +415,7 @@
             //todosSelected[disk.name] = {disk, part, input}
             let script = `#!/bin/bash
 set -euo pipefail`;
+            alert("Generando script\n"+JSON.stringify(todosSelected))
             for(let key in todosSelected) { 
                 alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
                 selected = todosSelected[key];
@@ -422,6 +423,9 @@ set -euo pipefail`;
 
             let disk = selected.disk
             let part = selected.part
+            alert("Partición seleccionada comienza en: "+(part.start*part['log-sec'])+' y acaba en: '+((part.start*part['log-sec'])+(+part.size-1)))
+            let PartIni=part.start*part['log-sec'];
+            let PartFin=(part.start*part['log-sec'])+(+part.size-1);
             let newSize = parseInt(selected.input.value)
 
             if (!newSize) { alert("Indique nuevo tamaño"); return }
@@ -449,29 +453,35 @@ set -euo pipefail`;
                 alert("Excede espacio disponible")
                 return
             }
-
-            
+            let newSizeMB=Math.floor((part.size-freed*1024*1024)/1000000)
+            let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
 script +=`
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
-parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
+${part.fstype==='ntfs' ? textoNTFS:''}
+#parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
+parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}B
 partprobe "$DISK"
 sleep 2
 `
-
+//sgdisk -n 14:204800:409599 "$DISK" los numeros son en sectores, no en MiB, por eso se multiplica por 1024*1024 y se resta a PartFin para que la nueva partición quede al final del espacio liberado
+let newIni=PartFin - (freed * 1024 * 1024)+1;
             toCreate.forEach((p, i) => {
-
-                const fs = p.element.querySelector("select").value
+                const sectroIni=newIni/part['log-sec']+1;
                 const size = parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
                 const label = document.getElementById(`label_${disk.path + getSeparator(disk.name) + p.num}`).value.trim() //
-                
+                let sectorFin=sectroIni+(size*1024*1024/part['log-sec'])-1;
+                newIni=newIni+(size*1024*1024);
+                    const fs = p.element.querySelector("select").value
+                    //alert(`Creando partición ${p.num} desde sector ${sectroIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
                 if (i === toCreate.length - 1) {
+                    sectorFin=(PartFin+1)/part['log-sec'];
                     script += `\necho "Creando partición final"
-sgdisk -n ${p.num}:0:0 "$DISK"
+sgdisk -n ${p.num}:${sectroIni}:${sectorFin} "$DISK"
 `
                 } else {
                     script += `\necho "Creando partición ${p.num}"
-sgdisk -n ${p.num}:0:+${size}MiB "$DISK"
+sgdisk -n ${p.num}:${sectroIni}:${sectorFin} "$DISK"
 `
                 }
 
@@ -526,25 +536,35 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
 
                 const reader = new FileReader()
                 reader.onload = evt => {
+                    
+                    //todosSelected[disk.name] = {disk, part, input}
+            let script = `#!/bin/bash
+set -euo pipefail
+`;
+            for(let key in todosSelected) { 
+                //alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
+                selected = todosSelected[key];
+                if (!selected) { alert("Seleccione partición"); return }
                     ///PARTE DE PRIMERO
-                    const disk = selected.disk
-                    const part = selected.part
-                    const newSize = parseInt(selected.input.value)
-                    const originalMiB = bytesToMiB(part.size)
-                    const freed = originalMiB - newSize
-                    const numMatch = part.name.match(/(\d+)$/)
+                    let disk = selected.disk
+                    let part = selected.part
+                    let newSize = parseInt(selected.input.value)
+                    let originalMiB = bytesToMiB(part.size)
+                    let freed = originalMiB - newSize
+                    let numMatch = part.name.match(/(\d+)$/)
                     if (!numMatch) { alert("Error número partición"); return }
-                    const partNumber = numMatch[1]
-                    const toCreate = newParts[disk.name] || []
+                    let partNumber = numMatch[1]
+                     toCreate = newParts[disk.name] || []
                     let requested = 0
                     toCreate.forEach((p, i) => {
                         if (i !== toCreate.length - 1)
-                            requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
+                            requested += parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
+                            //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
                     })
-                    let script = `#!/bin/bash
-set -euo pipefail
+                    script += `#!/bin/bash
+#set -euo pipefail
 
-echo "Modo CLON OEM"
+#echo "Modo CLON OEM"
 
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
@@ -553,6 +573,7 @@ partprobe "$DISK"
 sleep 2
 
 `
+                }
                     ///FINAL DE PARTE DE PRIMERO
 
                     clonedState = JSON.parse(evt.target.result)
