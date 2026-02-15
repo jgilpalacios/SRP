@@ -57,7 +57,8 @@
 
     <h2>OEM GPT Partition Tool PRO</h2>
     <p>Abre una consola en el escritorio y ejecuta la orden:<br>
-        <b>lsblk -J -b -o NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC >
+        <b>lsblk -J -b -o
+            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC >
             bloques.json</b>
         <br>y carga el archivo bloques.json
     </p>
@@ -125,8 +126,8 @@
             reader.onload = evt => {
                 data = JSON.parse(evt.target.result);
                 data.blockdevices.forEach(d => {
-                    if (d.type === "disk" && d.children) 
-                    d.children.sort((a, b) => a.start - b.start)
+                    if (d.type === "disk" && d.children)
+                        d.children.sort((a, b) => a.start - b.start)
                 })
                 render()
             }
@@ -181,12 +182,12 @@
                         })
                         span.style.display = "inline"
                         selected = { disk, part, input }
-                        todosSelected[disk.name] = {disk, part, input}
+                        todosSelected[disk.name] = { disk, part, input }
                         /*newParts[disk.name] = newParts[disk.name].filter(x => x.element !== div)
                         diskDiv.appendChild(div)
             newParts[disk.name].push({ num, element: div })*/
                         alert(JSON.stringify(newParts[disk.name]))
-                        if(newParts[disk.name])newParts[disk.name].forEach(p => p.element.remove())
+                        if (newParts[disk.name]) newParts[disk.name].forEach(p => p.element.remove())
                         //div.remove()
                         newParts[disk.name] = []
                         redrawDisk(disk)
@@ -243,7 +244,7 @@
                 }
                 const percent = Math.floor(sizeMiB / maxSize * 100)
                 if (percent < 1) Hasta100--;
-                
+
             })
             //let partOcupadaSize=0;
             let ocupadoAntes = 0;
@@ -252,10 +253,10 @@
                 const num = base + i + 1;
                 const sep = getSeparator(disk.name)
                 let name = disk.path + sep + num;
-                let auxSize=document.getElementById(`size_${name}`).value.trim();
-                let size=parseInt(auxSize) || 0;
-                if(auxSize==="100%") {
-                        size = bytesToMiB(selectedPart.size) - newSize - ocupadoAntes;
+                let auxSize = document.getElementById(`size_${name}`).value.trim();
+                let size = parseInt(auxSize) || 0;
+                if (auxSize === "100%") {
+                    size = bytesToMiB(selectedPart.size) - newSize - ocupadoAntes;
                 }
                 ocupadoAntes += size;
                 if (!size) return
@@ -287,9 +288,9 @@
                         //alert(document.getElementById(`size_${name}`).value)
                         //alert(p.element.querySelector("input[type=number]").value)
                         //let size = parseInt(p.element.querySelector("input[type=number]").value || 0)
-                        let auxSize=document.getElementById(`size_${name}`).value.trim();
-                        let size=parseInt(auxSize) || 0;
-                        if(auxSize==="100%") {
+                        let auxSize = document.getElementById(`size_${name}`).value.trim();
+                        let size = parseInt(auxSize) || 0;
+                        if (auxSize === "100%") {
                             size = bytesToMiB(part.size) - newSize - ocupado;
                         }
                         //alert(p.element.querySelector("input[type=number]"))
@@ -304,7 +305,7 @@
                         if (percent < 1) percent = 1;
                         ocupado += size;
                         const fs = p.element.querySelector("select").value
-                        drawRect(svg, xPercent, percent, getFsColor(fs), "red",6)
+                        drawRect(svg, xPercent, percent, getFsColor(fs), "red", 6)
                         xPercent += percent
                     })
                     freed = bytesToMiB(part.size) - newSize - ocupado;
@@ -312,7 +313,7 @@
                         //const freedPercent = (freed / totalMiB) * 100
                         let freedPercent = Math.floor(freed / maxSize * Hasta100);
                         if (freedPercent < 1) freedPercent = 1
-                        drawRect(svg, xPercent, freedPercent, "#ffffff", "black"/*"#999"*/,6)
+                        drawRect(svg, xPercent, freedPercent, "#ffffff", "black"/*"#999"*/, 6)
                         xPercent += freedPercent
                     }
 
@@ -393,9 +394,9 @@
 
             //div.querySelector("input[type=number]").addEventListener("input", () => redrawDisk(disk))
             //alert(`size_${name}`)
-            let entradas=div.querySelectorAll("input[type=text]")
+            let entradas = div.querySelectorAll("input[type=text]")
             entradas.forEach(ent => {
-                if(ent.id===`size_${name}`)ent.addEventListener("input", () => redrawDisk(disk))
+                if (ent.id === `size_${name}`) ent.addEventListener("input", () => redrawDisk(disk))
             })
             //.addEventListener("input", () => redrawDisk(disk))
             //div.getElementById(`size_${name}`).addEventListener("input", () => redrawDisk(disk))
@@ -404,7 +405,7 @@
             diskDiv.appendChild(div)
             alert(div)
             newParts[disk.name].push({ num, element: div })
-            alert('se añaden: '+JSON.stringify(newParts[disk.name]))
+            alert('se añaden: ' + JSON.stringify(newParts[disk.name]))
 
             redrawDisk(disk)
         }
@@ -415,95 +416,95 @@
             //todosSelected[disk.name] = {disk, part, input}
             let script = `#!/bin/bash
 set -euo pipefail`;
-            alert("Generando script\n"+JSON.stringify(todosSelected))
-            for(let key in todosSelected) { 
-                alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
+            alert("Generando script\n" + JSON.stringify(todosSelected))
+            for (let key in todosSelected) {
+                alert("Seleccionado en " + key + ": " + JSON.stringify(todosSelected[key]))
                 selected = todosSelected[key];
                 if (!selected) { alert("Seleccione partición"); return }
 
-            let disk = selected.disk
-            let part = selected.part
-            alert("Partición seleccionada comienza en: "+(part.start*part['log-sec'])+' y acaba en: '+((part.start*part['log-sec'])+(+part.size-1)))
-            let PartIni=part.start*part['log-sec'];
-            let PartFin=(part.start*part['log-sec'])+(+part.size-1);
-            let newSize = parseInt(selected.input.value)
+                let disk = selected.disk
+                let part = selected.part
+                alert("Partición seleccionada comienza en: " + (part.start * part['log-sec']) + ' y acaba en: ' + ((part.start * part['log-sec']) + (+part.size - 1)))
+                let PartIni = part.start * part['log-sec'];
+                let PartFin = (part.start * part['log-sec']) + (+part.size - 1);
+                let newSize = parseInt(selected.input.value)
 
-            if (!newSize) { alert("Indique nuevo tamaño"); return }
+                if (!newSize) { alert("Indique nuevo tamaño"); return }
 
-            let originalMiB = bytesToMiB(part.size)
-            let freed = originalMiB - newSize
-            if (freed <= 0) { alert("No libera espacio"); return }
+                let originalMiB = bytesToMiB(part.size)
+                let freed = originalMiB - newSize
+                if (freed <= 0) { alert("No libera espacio"); return }
 
-            let numMatch = part.name.match(/(\d+)$/)
-            if (!numMatch) { alert("Error número partición"); return }
-            let partNumber = numMatch[1]
-            //alert(JSON.stringify(newParts[disk.name]))
-            alert(part.name+'++'+partNumber+'++'+newSize+'++'+freed+'--'+disk.name+'--'+getSeparator(disk.name))
-            let toCreate = newParts[disk.name] || []
-            let requested = 0
-            toCreate.forEach((p, i) => {
-                
-                if (i !== toCreate.length - 1)
-                    alert(disk.path+'..'+`size_${disk.name + getSeparator(disk.name)+ p.num}`)
+                let numMatch = part.name.match(/(\d+)$/)
+                if (!numMatch) { alert("Error número partición"); return }
+                let partNumber = numMatch[1]
+                //alert(JSON.stringify(newParts[disk.name]))
+                alert(part.name + '++' + partNumber + '++' + newSize + '++' + freed + '--' + disk.name + '--' + getSeparator(disk.name))
+                let toCreate = newParts[disk.name] || []
+                let requested = 0
+                toCreate.forEach((p, i) => {
+
+                    if (i !== toCreate.length - 1)
+                        alert(disk.path + '..' + `size_${disk.name + getSeparator(disk.name) + p.num}`)
                     requested += parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
                     //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
-            })
+                })
 
-            if (requested > freed) {
-                alert("Excede espacio disponible")
-                return
-            }
-            let newSizeMB=Math.floor((part.size-freed*1024*1024)/1000000)
-            let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
-script +=`
+                if (requested > freed) {
+                    alert("Excede espacio disponible")
+                    return
+                }
+                let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000)
+                let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                script += `
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
-${part.fstype==='ntfs' ? textoNTFS:''}
+${part.fstype === 'ntfs' ? textoNTFS : ''}
 #parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
 parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
 partprobe "$DISK"
 sleep 2
 `
-//sgdisk -n 14:204800:409599 "$DISK" los numeros son en sectores, no en MiB, por eso se multiplica por 1024*1024 y se resta a PartFin para que la nueva partición quede al final del espacio liberado
-let newIni=PartFin - (freed * 1024 * 1024)+1;
-            toCreate.forEach((p, i) => {
-                const sectorIni=newIni/part['log-sec'];
-                const size = parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
-                const label = document.getElementById(`label_${disk.path + getSeparator(disk.name) + p.num}`).value.trim() //
-                let sectorFin=sectorIni+(size*1024*1024/part['log-sec'])-1;
-                newIni=newIni+(size*1024*1024);
+                //sgdisk -n 14:204800:409599 "$DISK" los numeros son en sectores, no en MiB, por eso se multiplica por 1024*1024 y se resta a PartFin para que la nueva partición quede al final del espacio liberado
+                let newIni = PartFin - (freed * 1024 * 1024) + 1;
+                toCreate.forEach((p, i) => {
+                    const sectorIni = newIni / part['log-sec'];
+                    const size = parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
+                    const label = document.getElementById(`label_${disk.path + getSeparator(disk.name) + p.num}`).value.trim() //
+                    let sectorFin = sectorIni + (size * 1024 * 1024 / part['log-sec']) - 1;
+                    newIni = newIni + (size * 1024 * 1024);
                     const fs = p.element.querySelector("select").value
                     //alert(`Creando partición ${p.num} desde sector ${sectorIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
-                if (i === toCreate.length - 1) {
-                    sectorFin=(PartFin+1)/part['log-sec']-1;
-                    script += `\necho "Creando partición final"
+                    if (i === toCreate.length - 1) {
+                        sectorFin = (PartFin + 1) / part['log-sec'] - 1;
+                        script += `\necho "Creando partición final"
 sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"
 `
-                } else {
-                    script += `\necho "Creando partición ${p.num}"
+                    } else {
+                        script += `\necho "Creando partición ${p.num}"
 sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"
 `
-                }
+                    }
 
-                script += `
+                    script += `
 partprobe "$DISK"
 sleep 1
 DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
 `
 
-                if (fs === "ext4") script += `mkfs.ext4 -F "$DEV"\n`
-                if (fs === "ntfs") script += `mkfs.ntfs -f "$DEV"\n`
-                if (fs === "vfat") script += `mkfs.vfat -F32 "$DEV"\n`
-                if (fs === "swap") script += `mkswap "$DEV"\n`
+                    if (fs === "ext4") script += `mkfs.ext4 -F "$DEV"\n`
+                    if (fs === "ntfs") script += `mkfs.ntfs -f "$DEV"\n`
+                    if (fs === "vfat") script += `mkfs.vfat -F32 "$DEV"\n`
+                    if (fs === "swap") script += `mkswap "$DEV"\n`
 
-                if (label) {
-                    if (fs === "ext4") script += `e2label "$DEV" "${label}"\n`
-                    if (fs === "ntfs") script += `ntfslabel "$DEV" "${label}"\n`
-                    if (fs === "vfat") script += `fatlabel "$DEV" "${label}"\n`
-                    if (fs === "swap") script += `swaplabel -L "${label}" "$DEV"\n`
-                }
-            })
-        }
+                    if (label) {
+                        if (fs === "ext4") script += `e2label "$DEV" "${label}"\n`
+                        if (fs === "ntfs") script += `ntfslabel "$DEV" "${label}"\n`
+                        if (fs === "vfat") script += `fatlabel "$DEV" "${label}"\n`
+                        if (fs === "swap") script += `swaplabel -L "${label}" "$DEV"\n`
+                    }
+                })
+            }
             script += `\necho "FINALIZADO"\n`
 
             download(script, "oem_partition_script.sh")
@@ -536,44 +537,51 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
 
                 const reader = new FileReader()
                 reader.onload = evt => {
-                    
+
                     //todosSelected[disk.name] = {disk, part, input}
-            let script = `#!/bin/bash
+                    let script = `#!/bin/bash
 set -euo pipefail
 `;
-            for(let key in todosSelected) { 
-                //alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
-                selected = todosSelected[key];
-                if (!selected) { alert("Seleccione partición"); return }
-                    ///PARTE DE PRIMERO
-                    let disk = selected.disk
-                    let part = selected.part
-                    let newSize = parseInt(selected.input.value)
-                    let originalMiB = bytesToMiB(part.size)
-                    let freed = originalMiB - newSize
-                    let numMatch = part.name.match(/(\d+)$/)
-                    if (!numMatch) { alert("Error número partición"); return }
-                    let partNumber = numMatch[1]
-                     toCreate = newParts[disk.name] || []
-                    let requested = 0
-                    toCreate.forEach((p, i) => {
-                        if (i !== toCreate.length - 1)
-                            requested += parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
+                    for (let key in todosSelected) {
+                        //alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
+                        selected = todosSelected[key];
+                        if (!selected) { alert("Seleccione partición"); return }
+                        ///PARTE DE PRIMERO
+                        let disk = selected.disk
+                        let part = selected.part
+                        let PartIni = part.start * part['log-sec'];
+                        let PartFin = (part.start * part['log-sec']) + (+part.size - 1);
+                        let newSize = parseInt(selected.input.value)
+                        let originalMiB = bytesToMiB(part.size)
+                        let freed = originalMiB - newSize
+                        let numMatch = part.name.match(/(\d+)$/)
+                        if (!numMatch) { alert("Error número partición"); return }
+                        let partNumber = numMatch[1]
+                        toCreate = newParts[disk.name] || []
+                        let requested = 0
+                        toCreate.forEach((p, i) => {
+                            if (i !== toCreate.length - 1)
+                                requested += parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
                             //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
-                    })
-                    script += `#!/bin/bash
+                        })
+                        let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000)
+                        let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                        script += `#!/bin/bash
 #set -euo pipefail
 
 #echo "Modo CLON OEM"
 
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
-parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
+${part.fstype === 'ntfs' ? textoNTFS : ''}
+#parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
+parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
 partprobe "$DISK"
 sleep 2
 
 `
-                }
+                    }
+
                     ///FINAL DE PARTE DE PRIMERO
 
                     clonedState = JSON.parse(evt.target.result)
@@ -610,11 +618,13 @@ if blkid | grep -q "${part.uuid}"; then
   exit 1
 fi
 `
-
+                                let sectorIni = part.start;
+                                let sectorFin = part.start + (part.size / part['log-sec']) - 1
                                 script += `
 echo "Creando partición ${part.name}"
 #sgdisk -n ${num}:0:0 ${newDisk.path}
-sgdisk -n ${num}:0:+${bytesToMiB(part.size)}MiB ${newDisk.path}
+#sgdisk -n ${num}:0:+${bytesToMiB(part.size)}MiB ${newDisk.path}
+sgdisk -n ${num}:${sectorIni}:${sectorFin} ${newDisk.path}
 sgdisk -u ${num}:${part.partuuid} ${newDisk.path}
 partprobe ${newDisk.path}
 sleep 1
@@ -624,14 +634,24 @@ sleep 1
                                     script += `mkfs.ext4 -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
 
                                 if (part.fstype === "ntfs")
-                                    script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    //script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    script += `ntfslabel --new-serial=${part.uuid} ${newDisk.path}${sep}${num}\n`
 
-                                if (part.fstype === "vfat")
-                                    script += `mkfs.vfat ${newDisk.path}${sep}${num}\nfatlabel ${newDisk.path}${sep}${num} "${part.label || ""}"\n`
-
-                                if (part.fstype === "swap")
-                                    script += `mkswap -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
-
+                                if (part.fstype === "vfat") {
+                                    let labelSinGion = part.uuid.replace(/-/g, '');
+                                    script += `mkfs.vfat -i ${labelSinGion} ${newDisk.path}${sep}${num}\n`
+                                    //script += `mkfs.vfat ${newDisk.path}${sep}${num}\nfatlabel ${newDisk.path}${sep}${num} "${part.label || ""}"\n`
+                                    if (part.label) {
+                                        script += `fatlabel ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                    }
+                                }
+                                if (part.fstype === "swap") {
+                                    if (part.label) {
+                                        script += `swaplabel -L "${part.label}" -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    } else {
+                                        script += `mkswap -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    }
+                                }
                                 if (part.label && part.fstype !== "vfat") {
                                     if (part.fstype === "ext4")
                                         script += `e2label ${newDisk.path}${sep}${num} "${part.label}"\n`
