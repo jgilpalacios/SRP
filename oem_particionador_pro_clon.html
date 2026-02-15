@@ -475,14 +475,20 @@ sleep 2
                     newIni = newIni + (size * 1024 * 1024);
                     const fs = p.element.querySelector("select").value
                     //alert(`Creando partición ${p.num} desde sector ${sectorIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
+                    let textoFs='\n';
+                    if(fs === 'ntfs'||fs === 'vfat'){
+                         textoFs = `\nsgdisk -t ${p.num}:0700 "$DISK"`
+                         if(label==='EFI'&&fs === 'vfat') textoFs = `\nsgdisk -t ${p.num}:EF00 "$DISK"`
+                    }
+                    
                     if (i === toCreate.length - 1) {
                         sectorFin = (PartFin + 1) / part['log-sec'] - 1;
                         script += `\necho "Creando partición final"
-sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"
+sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
 `
                     } else {
                         script += `\necho "Creando partición ${p.num}"
-sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"
+sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
 `
                     }
 
@@ -490,17 +496,22 @@ sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"
 partprobe "$DISK"
 sleep 1
 DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
-`
-
+`                   ;
+                    textoFs = '';
+                    if(label){                          
+                            if(fs === 'vfat') textoFs = `-n ${label}`;
+                            if(fs === 'ntfs') textoFs = `--label ${label}`;       
+                    }
+                    
                     if (fs === "ext4") script += `mkfs.ext4 -F "$DEV"\n`
-                    if (fs === "ntfs") script += `mkfs.ntfs -f "$DEV"\n`
-                    if (fs === "vfat") script += `mkfs.vfat -F32 "$DEV"\n`
+                    if (fs === "ntfs") script += `mkfs.ntfs --fast ${textoFs} "$DEV"\n`
+                    if (fs === "vfat") script += `mkfs.vfat -F32 ${textoFs} "$DEV"\n`
                     if (fs === "swap") script += `mkswap "$DEV"\n`
 
                     if (label) {
                         if (fs === "ext4") script += `e2label "$DEV" "${label}"\n`
-                        if (fs === "ntfs") script += `ntfslabel "$DEV" "${label}"\n`
-                        if (fs === "vfat") script += `fatlabel "$DEV" "${label}"\n`
+                        //if (fs === "ntfs") script += `ntfslabel "$DEV" "${label}"\n`
+                        //if (fs === "vfat") script += `fatlabel "$DEV" "${label}"\n`
                         if (fs === "swap") script += `swaplabel -L "${label}" "$DEV"\n`
                     }
                 })
