@@ -460,28 +460,28 @@ DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
 ${part.fstype==='ntfs' ? textoNTFS:''}
 #parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
-parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}B
+parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
 partprobe "$DISK"
 sleep 2
 `
 //sgdisk -n 14:204800:409599 "$DISK" los numeros son en sectores, no en MiB, por eso se multiplica por 1024*1024 y se resta a PartFin para que la nueva partición quede al final del espacio liberado
 let newIni=PartFin - (freed * 1024 * 1024)+1;
             toCreate.forEach((p, i) => {
-                const sectroIni=newIni/part['log-sec']+1;
+                const sectorIni=newIni/part['log-sec'];
                 const size = parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
                 const label = document.getElementById(`label_${disk.path + getSeparator(disk.name) + p.num}`).value.trim() //
-                let sectorFin=sectroIni+(size*1024*1024/part['log-sec'])-1;
+                let sectorFin=sectorIni+(size*1024*1024/part['log-sec'])-1;
                 newIni=newIni+(size*1024*1024);
                     const fs = p.element.querySelector("select").value
-                    //alert(`Creando partición ${p.num} desde sector ${sectroIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
+                    //alert(`Creando partición ${p.num} desde sector ${sectorIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
                 if (i === toCreate.length - 1) {
-                    sectorFin=(PartFin+1)/part['log-sec'];
+                    sectorFin=(PartFin+1)/part['log-sec']-1;
                     script += `\necho "Creando partición final"
-sgdisk -n ${p.num}:${sectroIni}:${sectorFin} "$DISK"
+sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"
 `
                 } else {
                     script += `\necho "Creando partición ${p.num}"
-sgdisk -n ${p.num}:${sectroIni}:${sectorFin} "$DISK"
+sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"
 `
                 }
 
