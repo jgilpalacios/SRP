@@ -631,11 +631,16 @@ fi
 `
                                 let sectorIni = part.start;
                                 let sectorFin = part.start + (part.size / part['log-sec']) - 1
+                                let textoFs='';
+                    if(part.fstype === 'ntfs'||part.fstype === 'vfat'){
+                         textoFs = `\nsgdisk -t ${num}:0700 ${newDisk.path}`
+                         if(part.label==='EFI'&&part.fstype === 'vfat') textoFs = `\nsgdisk -t ${num}:EF00 ${newDisk.path}`
+                    }
                                 script += `
 echo "Creando partición ${part.name}"
 #sgdisk -n ${num}:0:0 ${newDisk.path}
 #sgdisk -n ${num}:0:+${bytesToMiB(part.size)}MiB ${newDisk.path}
-sgdisk -n ${num}:${sectorIni}:${sectorFin} ${newDisk.path}
+sgdisk -n ${num}:${sectorIni}:${sectorFin} ${newDisk.path}${textoFs}
 sgdisk -u ${num}:${part.partuuid} ${newDisk.path}
 partprobe ${newDisk.path}
 sleep 1
@@ -650,11 +655,13 @@ sleep 1
 
                                 if (part.fstype === "vfat") {
                                     let labelSinGion = part.uuid.replace(/-/g, '');
-                                    script += `mkfs.vfat -i ${labelSinGion} ${newDisk.path}${sep}${num}\n`
+                                    if(part.label) textoFs = `-n ${part.label}`;
+                                    else textoFs = '';
+                                    script += `mkfs.vfat -F32 ${textoFs} -i ${labelSinGion} ${newDisk.path}${sep}${num}\n`
                                     //script += `mkfs.vfat ${newDisk.path}${sep}${num}\nfatlabel ${newDisk.path}${sep}${num} "${part.label || ""}"\n`
-                                    if (part.label) {
+                                    /*if (part.label) {
                                         script += `fatlabel ${newDisk.path}${sep}${num} "${part.label}"\n`
-                                    }
+                                    }*/
                                 }
                                 if (part.fstype === "swap") {
                                     if (part.label) {
@@ -667,7 +674,8 @@ sleep 1
                                     if (part.fstype === "ext4")
                                         script += `e2label ${newDisk.path}${sep}${num} "${part.label}"\n`
                                     if (part.fstype === "ntfs")
-                                        script += `ntfslabel ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                        //script += `ntfslabel ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                        script += `mkfs.ntfs --fast --label "${part.label}" ${newDisk.path}${sep}${num}\n`
                                 }
 
                                 /*                                script += `
