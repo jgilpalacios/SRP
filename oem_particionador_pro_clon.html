@@ -186,7 +186,7 @@
                         /*newParts[disk.name] = newParts[disk.name].filter(x => x.element !== div)
                         diskDiv.appendChild(div)
             newParts[disk.name].push({ num, element: div })*/
-                        alert(JSON.stringify(newParts[disk.name]))
+                        //alert(JSON.stringify(newParts[disk.name]))
                         if (newParts[disk.name]) newParts[disk.name].forEach(p => p.element.remove())
                         //div.remove()
                         newParts[disk.name] = []
@@ -229,7 +229,7 @@
             svg.innerHTML = ""
 
             const totalMiB = bytesToMiB(disk.size)
-            if (maxSize < totalMiB) maxSize = totalMiB;
+            /*if (maxSize < totalMiB)*/ maxSize = totalMiB;
             let xPercent = 0
 
             const selectedPart = selected?.disk?.name === disk.name ? selected.part : null
@@ -403,28 +403,62 @@
             div.querySelector("select").addEventListener("change", () => redrawDisk(disk))
 
             diskDiv.appendChild(div)
-            alert(div)
+            //alert(div)
             newParts[disk.name].push({ num, element: div })
-            alert('se añaden: ' + JSON.stringify(newParts[disk.name]))
+            //alert('se añaden: ' + JSON.stringify(newParts[disk.name]))
 
             redrawDisk(disk)
         }
 
         // ---------------- GENERAR SCRIPT ----------------
+        let cabeceraScript = `#!/bin/bash
+set -euo pipefail`;
+        let ejecucionScript = `# =============================
+# EJECUCIÓN
+# =============================
 
+require_root
+confirm_destruction`;
+        let scriptFunciones=`# =============================
+# FUNCIONES
+# =============================
+
+require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "ERROR: Debe ejecutarse como root"
+    exit 1
+  fi
+}
+
+check_disk() {
+  [[ -b "$1" ]] || { echo "ERROR: Disco $1 no existe"; exit 1; }
+}
+
+`;
+let scriptConfirmar={cabecera:`confirm_destruction() {
+  echo "=============================================="
+  echo "⚠  ADVERTENCIA: Operación potencialmente destructiva"
+  echo "Se modificarán los discos:"`,cuerpo:``,final:`  echo "=============================================="
+  read -rp "Escriba 'CONFIRMAR' para continuar: " confirm
+
+  if [[ "$confirm" != "CONFIRMAR" ]]; then
+    echo "Abortado."
+    exit 1
+  fi
+}
+`}
         function generateScript() {
             //todosSelected[disk.name] = {disk, part, input}
-            let script = `#!/bin/bash
-set -euo pipefail`;
-            alert("Generando script\n" + JSON.stringify(todosSelected))
+            let script = ``;
+            //alert("Generando script\n" + JSON.stringify(todosSelected))
             for (let key in todosSelected) {
-                alert("Seleccionado en " + key + ": " + JSON.stringify(todosSelected[key]))
+                //alert("Seleccionado en " + key + ": " + JSON.stringify(todosSelected[key]))
                 selected = todosSelected[key];
                 if (!selected) { alert("Seleccione partición"); return }
 
                 let disk = selected.disk
                 let part = selected.part
-                alert("Partición seleccionada comienza en: " + (part.start * part['log-sec']) + ' y acaba en: ' + ((part.start * part['log-sec']) + (+part.size - 1)))
+                //alert("Partición seleccionada comienza en: " + (part.start * part['log-sec']) + ' y acaba en: ' + ((part.start * part['log-sec']) + (+part.size - 1)))
                 let PartIni = part.start * part['log-sec'];
                 let PartFin = (part.start * part['log-sec']) + (+part.size - 1);
                 let newSize = parseInt(selected.input.value)
@@ -439,13 +473,13 @@ set -euo pipefail`;
                 if (!numMatch) { alert("Error número partición"); return }
                 let partNumber = numMatch[1]
                 //alert(JSON.stringify(newParts[disk.name]))
-                alert(part.name + '++' + partNumber + '++' + newSize + '++' + freed + '--' + disk.name + '--' + getSeparator(disk.name))
+                //alert(part.name + '++' + partNumber + '++' + newSize + '++' + freed + '--' + disk.name + '--' + getSeparator(disk.name))
                 let toCreate = newParts[disk.name] || []
                 let requested = 0
                 toCreate.forEach((p, i) => {
 
-                    if (i !== toCreate.length - 1)
-                        alert(disk.path + '..' + `size_${disk.name + getSeparator(disk.name) + p.num}`)
+                    //if (i !== toCreate.length - 1)
+                        //alert(disk.path + '..' + `size_${disk.name + getSeparator(disk.name) + p.num}`)
                     requested += parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
                     //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
                 })
@@ -456,6 +490,8 @@ set -euo pipefail`;
                 }
                 let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000)
                 let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                scriptConfirmar.cuerpo += `\n  echo "   - ${disk.path}"`;
+                ejecucionScript += `\ncheck_disk "${disk.path}"`;
                 script += `
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
@@ -475,7 +511,7 @@ sleep 2
                     newIni = newIni + (size * 1024 * 1024);
                     const fs = p.element.querySelector("select").value
                     //alert(`Creando partición ${p.num} desde sector ${sectorIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
-                    let textoFs='\n';
+                    let textoFs='';
                     if(fs === 'ntfs'||fs === 'vfat'){
                          textoFs = `\nsgdisk -t ${p.num}:0700 "$DISK"`
                          if(label==='EFI'&&fs === 'vfat') textoFs = `\nsgdisk -t ${p.num}:EF00 "$DISK"`
@@ -517,7 +553,7 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
                 })
             }
             script += `\necho "FINALIZADO"\n`
-
+            script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
             download(script, "oem_partition_script.sh")
             //para clonar
             originalState = JSON.parse(JSON.stringify(data))
