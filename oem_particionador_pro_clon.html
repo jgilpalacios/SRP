@@ -379,7 +379,7 @@
     </select>
     Tamaño MiB:
     <!--<input type="number" min="1" id="size_${name}" style="width:80px">-->
-    <input type="text" id="size_${name}" style="width:80px">
+    <input type="text" id="size_${name}" style="width:80px" value="100%">
     Label:
     <input type="text" id="label_${name}" style="width:100px">
     <button type="button">❌</button>
@@ -434,6 +434,45 @@ check_disk() {
   [[ -b "$1" ]] || { echo "ERROR: Disco $1 no existe"; exit 1; }
 }
 
+check_partition_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        echo "ERROR: La partición $partition YA existe."
+        exit 1
+    fi
+
+    return0
+}
+
+unmount_if_mounted() {
+    local partition="$1"
+
+    if findmnt -rn -S "$partition" > /dev/null 2>&1; then
+        echo "La partición $partition está montada. Desmontando..."
+        if umount "$partition"; then
+            echo "Desmontada correctamente."
+            return 0
+        else
+            echo "Error al desmontar $partition."
+            exit 1
+        fi
+    else
+        echo "La partición $partition no está montada."
+        return 0
+    fi
+}
+
+check_partition_NO_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        return 0
+    fi
+    
+    echo "ERROR: La partición $partition NO existe."
+    exit 1
+}
 `;
 let scriptConfirmar={cabecera:`confirm_destruction() {
   echo "=============================================="
@@ -488,18 +527,29 @@ let scriptConfirmar={cabecera:`confirm_destruction() {
                     alert("Excede espacio disponible")
                     return
                 }
-                let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000)
-                let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                let newSizeMiB = bytesToMiB(part.size) - freed;
+                let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000);
+                let newSizeEnBytes = part.size - freed * 1024 * 1024;
+                let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeEnBytes} --force ${part.path}` : '';
+                //let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                //Para redimesion Ext4 aunque se pone en MiB se indica con la sigla M.
+                let textoExt4 = part.fstype === 'ext4' ? `resize2fs ${part.path} ${newSizeMiB}M` : '';
                 scriptConfirmar.cuerpo += `\n  echo "   - ${disk.path}"`;
-                ejecucionScript += `\ncheck_disk "${disk.path}"`;
+                ejecucionScript += `\ncheck_disk "${disk.path}"
+check_partition_NO_exists "${disk.path}${getSeparator(disk.name)}${partNumber}"
+unmount_if_mounted "${disk.path}${getSeparator(disk.name)}${partNumber}"
+`;
                 script += `
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
-${part.fstype === 'ntfs' ? textoNTFS : ''}
-#parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
+# 2️⃣ Verificar filesystem si es ext4${part.fstype === 'ext4' ? `\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}`:''}
+# 3️⃣ Reducir el filesystem
+${part.fstype === 'ntfs' ? textoNTFS : ''}${part.fstype === 'ext4' ? textoExt4 : ''}
 parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
 partprobe "$DISK"
 sleep 2
+# 6️⃣ Verificación final${part.fstype === 'ext4' ? `\n#e2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}`:''}
+
 `
                 //sgdisk -n 14:204800:409599 "$DISK" los numeros son en sectores, no en MiB, por eso se multiplica por 1024*1024 y se resta a PartFin para que la nueva partición quede al final del espacio liberado
                 let newIni = PartFin - (freed * 1024 * 1024) + 1;
@@ -527,7 +577,7 @@ sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
 sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
 `
                     }
-
+                    ejecucionScript += `\ncheck_partition_exists  "${disk.path}${getSeparator(disk.name)}${p.num}"`
                     script += `
 partprobe "$DISK"
 sleep 1
@@ -584,11 +634,58 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
 
                 const reader = new FileReader()
                 reader.onload = evt => {
+                let cabeceraScript = `#!/bin/bash
+set -euo pipefail`;
+        let ejecucionScript = `# =============================
+# EJECUCIÓN
+# =============================
 
+require_root
+confirm_destruction`;
+        let scriptFunciones=`# =============================
+# FUNCIONES
+# =============================
+
+require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "ERROR: Debe ejecutarse como root"
+    exit 1
+  fi
+}
+
+check_disk() {
+  [[ -b "$1" ]] || { echo "ERROR: Disco $1 no existe"; exit 1; }
+}
+
+check_uuid_conflict() {
+  local uuid="$1"
+  if blkid -U "$uuid" &>/dev/null; then
+    echo "ERROR: Conflicto UUID $uuid"
+    exit 1
+  fi
+}
+
+check_partuuid_conflict() {
+  local partuuid="$1"
+  if blkid -t PARTUUID="$partuuid" &>/dev/null; then
+    echo "ERROR: Conflicto PARTUUID $partuuid"
+    exit 1
+  fi
+}`;
+let scriptConfirmar={cabecera:`confirm_destruction() {
+  echo "=============================================="
+  echo "⚠  ADVERTENCIA: Operación potencialmente destructiva"
+  echo "Se modificarán los discos:"`,cuerpo:``,final:`  echo "=============================================="
+  read -rp "Escriba 'CONFIRMAR' para continuar: " confirm
+
+  if [[ "$confirm" != "CONFIRMAR" ]]; then
+    echo "Abortado."
+    exit 1
+  fi
+}
+`}
                     //todosSelected[disk.name] = {disk, part, input}
-                    let script = `#!/bin/bash
-set -euo pipefail
-`;
+                    let script = ``;
                     for (let key in todosSelected) {
                         //alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
                         selected = todosSelected[key];
@@ -613,10 +710,9 @@ set -euo pipefail
                         })
                         let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000)
                         let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
-                        script += `#!/bin/bash
-#set -euo pipefail
-
-#echo "Modo CLON OEM"
+                        scriptConfirmar.cuerpo += `\n  echo "   - ${disk.path}"`;
+                        ejecucionScript += `\ncheck_disk "${disk.path}"`;
+                        script += `#echo "Modo CLON OEM"
 
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
@@ -672,6 +768,10 @@ fi
                          textoFs = `\nsgdisk -t ${num}:0700 ${newDisk.path}`
                          if(part.label==='EFI'&&part.fstype === 'vfat') textoFs = `\nsgdisk -t ${num}:EF00 ${newDisk.path}`
                     }
+                                ejecucionScript += `\n
+check_uuid_conflict "${part.uuid}"
+check_partuuid_conflict "${part.partuuid}"
+`
                                 script += `
 echo "Creando partición ${part.name}"
 #sgdisk -n ${num}:0:0 ${newDisk.path}
@@ -725,7 +825,7 @@ sleep 1
                     })
 
                     script += `echo "CLON FINALIZADO"\n`
-
+                    script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
                     download(script, "oem_clone_script.sh")
                 }
 
