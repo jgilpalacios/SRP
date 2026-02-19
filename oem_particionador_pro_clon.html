@@ -157,9 +157,10 @@
 
                     const row = document.createElement("div")
                     row.className = "partition-row"
-
+                    let visbilidad=''
+                    if(!(part.fstype==='ntfs'||part.fstype==='ext4')) visbilidad='style="visibility:hidden"'
                     row.innerHTML = `
-        <input type="radio" name="resize-${disk.name}">
+        <input type="radio" name="resize-${disk.name}" ${visbilidad}>
         ${part.path} (${part.fstype || "sin fs"}) ${sizeMiB} MiB
         <span style="display:none">
           Nuevo tamaño MiB:
@@ -442,7 +443,7 @@ check_partition_exists() {
         exit 1
     fi
 
-    return0
+    return 0
 }
 
 unmount_if_mounted() {
@@ -657,6 +658,46 @@ check_disk() {
   [[ -b "$1" ]] || { echo "ERROR: Disco $1 no existe"; exit 1; }
 }
 
+check_partition_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        echo "ERROR: La partición $partition YA existe."
+        exit 1
+    fi
+
+    return 0
+}
+
+unmount_if_mounted() {
+    local partition="$1"
+
+    if findmnt -rn -S "$partition" > /dev/null 2>&1; then
+        echo "La partición $partition está montada. Desmontando..."
+        if umount "$partition"; then
+            echo "Desmontada correctamente."
+            return 0
+        else
+            echo "Error al desmontar $partition."
+            exit 1
+        fi
+    else
+        echo "La partición $partition no está montada."
+        return 0
+    fi
+}
+
+check_partition_NO_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        return 0
+    fi
+    
+    echo "ERROR: La partición $partition NO existe."
+    exit 1
+}
+
 check_uuid_conflict() {
   local uuid="$1"
   if blkid -U "$uuid" &>/dev/null; then
@@ -708,15 +749,19 @@ let scriptConfirmar={cabecera:`confirm_destruction() {
                                 requested += parseInt(document.getElementById(`size_${disk.path + getSeparator(disk.name) + p.num}`).value.trim())
                             //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
                         })
-                        let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000)
-                        let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                        let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000);
+                        let textoExt4 = part.fstype === 'ext4' ? `resize2fs ${part.path} ${newSize}M` : '';
+                        //let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                        let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${part.size - freed * 1024 * 1024} --force ${part.path}` : '';
                         scriptConfirmar.cuerpo += `\n  echo "   - ${disk.path}"`;
-                        ejecucionScript += `\ncheck_disk "${disk.path}"`;
+                        ejecucionScript += `\ncheck_disk "${disk.path}"
+check_partition_NO_exists "${disk.path}${getSeparator(disk.name)}${partNumber}"
+unmount_if_mounted "${disk.path}${getSeparator(disk.name)}${partNumber}"`;
                         script += `#echo "Modo CLON OEM"
 
 DISK="${disk.path}"
-echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
-${part.fstype === 'ntfs' ? textoNTFS : ''}
+${part.fstype === 'ext4' ? `# 2️⃣ Verificar filesystem si es ext4\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}`:''}
+echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"${part.fstype === 'ntfs' ? '\n'+textoNTFS : ''}${part.fstype === 'ext4' ? '\n'+textoExt4 : ''}
 #parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
 parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
 partprobe "$DISK"
@@ -769,6 +814,7 @@ fi
                          if(part.label==='EFI'&&part.fstype === 'vfat') textoFs = `\nsgdisk -t ${num}:EF00 ${newDisk.path}`
                     }
                                 ejecucionScript += `\n
+check_partition_exists "/dev/${part.name}"
 check_uuid_conflict "${part.uuid}"
 check_partuuid_conflict "${part.partuuid}"
 `
@@ -781,13 +827,11 @@ sgdisk -u ${num}:${part.partuuid} ${newDisk.path}
 partprobe ${newDisk.path}
 sleep 1
 `
-
+                            
                                 if (part.fstype === "ext4")
                                     script += `mkfs.ext4 -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
 
-                                if (part.fstype === "ntfs")
-                                    //script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
-                                    script += `ntfslabel --new-serial=${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                //iba lo de ntfs antes de la etiqueta en el mkfs, pero al poner la etiqueta ahí no se aplicaba, así que se pone aparte y con --fast para que sea más rápido aunque no tan óptimo
 
                                 if (part.fstype === "vfat") {
                                     let labelSinGion = part.uuid.replace(/-/g, '');
@@ -813,13 +857,11 @@ sleep 1
                                         //script += `ntfslabel ${newDisk.path}${sep}${num} "${part.label}"\n`
                                         script += `mkfs.ntfs --fast --label "${part.label}" ${newDisk.path}${sep}${num}\n`
                                 }
+                                if (part.fstype === "ntfs")
+                                    //script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    script += `ntfslabel --new-serial=${part.uuid} ${newDisk.path}${sep}${num}\n`
 
-                                /*                                script += `
-                                if blkid | grep -q "${part.uuid}"; then
-                                  echo "ERROR: Conflicto UUID ${part.uuid}"
-                                  exit 1
-                                fi
-                                `*/
+                                
                             }
                         })
                     })
