@@ -77,6 +77,7 @@
         let selected = null
         let todosSelected = {};
         let newParts = {}
+        //let partActivada=''
 
         // ---------------- UTILIDADES ----------------
         //todosSelected[disk.name] = { disk, part, input }
@@ -264,6 +265,7 @@
                     })
 
                     input.addEventListener("input", () => {//alert(input.value);
+                        //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
                         const free = sizeMiB - parseInt(input.value || 0)
                         if (free < 0) {
                             info.textContent = "⚠ Excede tamaño"
@@ -292,7 +294,11 @@
         // ---------------- REDIBUJAR SVG ----------------
 
         function redrawDisk(disk) {
-
+            if(todosSelected[disk.name]&& selected && selected.disk.name !== disk.name){
+                const selectedPart = todosSelected[disk.name].part;
+                const radio = document.getElementById(`radio_${selectedPart.name}`);
+                radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            }
             const svg = document.querySelector(`svg[data-disk='${disk.name}']`)
             if (!svg) return
 
@@ -446,7 +452,8 @@
                 return
             }else{
                 const selectedPart = todosSelected[disk.name].part;
-                
+                //const radio = document.getElementById(`radio_${selectedPart.name}`);
+                //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
                 if(!document.getElementById(`input_${selectedPart.name}`).value.trim()){
                     alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
                     return
@@ -508,8 +515,8 @@
                 // y si no se vuelve a seleccionar no se muestra el espacio liberado al eliminar la partición,
                 // ya que el espacio liberado se calcula en base a la partición seleccionada
                 const selectedPart = todosSelected[disk.name].part;
-                const radio = document.getElementById(`radio_${selectedPart.name}`);
-                radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                //const radio = document.getElementById(`radio_${selectedPart.name}`);
+                //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
                 if(!document.getElementById(`input_${selectedPart.name}`).value.trim()){
                     alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
