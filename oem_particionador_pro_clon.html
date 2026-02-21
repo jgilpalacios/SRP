@@ -503,12 +503,24 @@
 
             const removeBtn = div.querySelector("button")
             removeBtn.onclick = () => {
+                //hay que volver a seleccionar la partición para redimensionar, 
+                // ya que al eliminar la última partición añadida se vuelve a mostrar la anterior, 
+                // y si no se vuelve a seleccionar no se muestra el espacio liberado al eliminar la partición,
+                // ya que el espacio liberado se calcula en base a la partición seleccionada
+                const selectedPart = todosSelected[disk.name].part;
+                const radio = document.getElementById(`radio_${selectedPart.name}`);
+                radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+                if(!document.getElementById(`input_${selectedPart.name}`).value.trim()){
+                    alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
+                    return
+                }
                 if(prev>base)document.getElementById(`remove_${disk.name + sep + prev}`).style.visibility = "visible"; //al eliminar la partición se vuelve a mostrar la anterior
                 div.remove()
-                alert(JSON.stringify(newParts[disk.name]))
+                //alert(JSON.stringify(newParts[disk.name]))
                 //newParts[disk.name] = newParts[disk.name].filter(x => x.element !== div)
                 newParts[disk.name].pop()//Elimina la última partición añadida, que es la que se borra al hacer click en el botón de eliminar, ya que no se puede eliminar una partición que no sea la última añadida
-                alert(JSON.stringify(newParts[disk.name]))
+                //alert(JSON.stringify(newParts[disk.name]))
                 redrawDisk(disk)
             }
 
