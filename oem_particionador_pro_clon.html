@@ -66,7 +66,7 @@
     <div id="disks"></div>
     <button onclick="generateScript()">Generar Script OEM</button>
     <button onclick="generateCloneScriptUNO()">Generar Script CLON con UUIDs</button>
-    <input type="file" id="fileInputLoadState">Carga estado</button>
+    Carga estado guardado: <input type="file" id="fileInputLoadState">
     <script>
         //para clonar
         let originalState = null
@@ -82,7 +82,7 @@
         // ---------------- UTILIDADES ----------------
         //todosSelected[disk.name] = { disk, part, input }
         const guardaConfiguracion = () => {
-        
+
             localStorage.setItem("todosSelected", JSON.stringify(todosSelected))
             localStorage.setItem("newParts", JSON.stringify(newParts))
         }
@@ -132,6 +132,16 @@
         document.getElementById("fileInput").addEventListener("change", e => {
             const reader = new FileReader()
             reader.onload = evt => {
+                //reiniciamos todo:
+                //para clonar
+                originalState = null
+                clonedState = null
+                //fin para clonar
+
+                data = null
+                selected = null
+                todosSelected = {};
+                newParts = {}
                 data = JSON.parse(evt.target.result);
                 data.blockdevices.forEach(d => {
                     if (d.type === "disk" && d.children)
@@ -141,10 +151,21 @@
             }
             reader.readAsText(e.target.files[0])
         })
-        
+
         document.getElementById("fileInputLoadState").addEventListener("change", e => {
             const reader = new FileReader()
             reader.onload = evt => {
+                //reiniciamos todo:
+                //para clonar
+                originalState = null
+                clonedState = null
+                //fin para clonar
+
+                data = null
+                selected = null
+                todosSelected = {};
+                newParts = {}
+
                 const savedState = JSON.parse(evt.target.result)
                 data = savedState.data || data
                 data.blockdevices.forEach(d => {
@@ -155,17 +176,17 @@
                 //newParts = savedState.newParts || {}
                 //todosSelected = savedState.todosSelected || {}
                 let estadoValores = savedState.estadoValores || {}
-                for (let diskName in estadoValores){
-                    let partName=estadoValores[diskName].partName;
-                    let radio=document.getElementById('radio_'+partName);
+                for (let diskName in estadoValores) {
+                    let partName = estadoValores[diskName].partName;
+                    let radio = document.getElementById('radio_' + partName);
                     radio.checked = true;
                     radio.dispatchEvent(new Event("click", { bubbles: true }));
-                    let input = document.getElementById('input_'+partName);
+                    let input = document.getElementById('input_' + partName);
                     input.value = estadoValores[diskName].newSize;
                     input.dispatchEvent(new Event("input", { bubbles: true }));
                     let nuevas = estadoValores[diskName].nuevas || [];
                     nuevas.forEach(nueva => {
-                        let butonAdd=document.getElementById('add_' + diskName);
+                        let butonAdd = document.getElementById('add_' + diskName);
                         butonAdd.dispatchEvent(new Event('click', { bubbles: true }));
                         let select = document.getElementById(`fs_${nueva.name}`);
                         select.value = nueva.fs;
@@ -176,7 +197,7 @@
                         //select.dispatchEvent(new Event("change", { bubbles: true }));
                     })
                 }
-               
+
                 /*document.getElementById('disks').innerHTML = savedState.container || document.getElementById('disks').innerHTML
                 //render()
                 let disk = null;
@@ -213,8 +234,8 @@
 
                     const row = document.createElement("div")
                     row.className = "partition-row";
-                    let visbilidad=''
-                    if(!(part.fstype==='ntfs'||part.fstype==='ext4')) visbilidad='style="visibility:hidden"'
+                    let visbilidad = ''
+                    if (!(part.fstype === 'ntfs' || part.fstype === 'ext4')) visbilidad = 'style="visibility:hidden"'
                     row.innerHTML = `
         <input type="radio" id="radio_${part.name}" name="resize-${disk.name}" ${visbilidad}>
         ${part.path} (${part.fstype || "sin fs"}) ${sizeMiB} MiB
@@ -247,8 +268,8 @@
                         //if (!newParts[disk.name]) newParts[disk.name] = []
                         //newParts[disk.name].push({ num, element: div })
                         //alert(JSON.stringify(newParts[disk.name]))
-                        if(todosSelected[disk.name]){
-                            if(todosSelected[disk.name].part.name !== part.name){
+                        if (todosSelected[disk.name]) {
+                            if (todosSelected[disk.name].part.name !== part.name) {
                                 //alert("Partición seleccionada: " + part.name)
                                 if (newParts[disk.name]) newParts[disk.name].forEach(p => p.element.remove())
                                 newParts[disk.name] = [];
@@ -257,7 +278,7 @@
 
                         }
                         todosSelected[disk.name] = { disk, part, input }
-                        
+
                         //if (newParts[disk.name]) newParts[disk.name].forEach(p => p.element.remove())
                         //div.remove()
                         //newParts[disk.name] = []
@@ -294,7 +315,7 @@
         // ---------------- REDIBUJAR SVG ----------------
 
         function redrawDisk(disk) {
-            if(todosSelected[disk.name]&& selected && selected.disk.name !== disk.name){
+            if (todosSelected[disk.name] && selected && selected.disk.name !== disk.name) {
                 const selectedPart = todosSelected[disk.name].part;
                 const radio = document.getElementById(`radio_${selectedPart.name}`);
                 radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -342,7 +363,7 @@
 
             disk.children?.forEach(part => {
 
-               let sizeMiB = bytesToMiB(part.size)
+                let sizeMiB = bytesToMiB(part.size)
 
                 if (selectedPart && part.name === selectedPart.name && newSize) {
                     //alert('siii')
@@ -385,9 +406,9 @@
                         drawRect(svg, xPercent, percent, getFsColor(fs), "red", 6)
                         xPercent += percent
                     })
-                    
+
                     freed = bytesToMiB(part.size) - newSize - ocupado;
-                    
+
                     if (freed > 0) {
                         //const freedPercent = (freed / totalMiB) * 100
                         let freedPercent = Math.floor(freed / maxSize * Hasta100);
@@ -406,17 +427,17 @@
                     //let freed = 0;
                     //let ocupado = 0;
                 }
-                let infoElement=document.getElementById(`info_${part.name}`);
+                let infoElement = document.getElementById(`info_${part.name}`);
                 if (infoElement) {
                     //alert("ocupado: " + ocupado + " freed: " + freed+ " MiB particion: " + bytesToMiB(part.size) + " newSize: " + newSize)
                     //infoElement.innerText = `Libre: ${freed} MiB`;
                     if (freed < 0) {
-                            infoElement.textContent = "⚠ Excede tamaño"
-                            infoElement.style.color = "red"
-                        } else {
-                            infoElement.textContent = `Libre: ${freed} MiB`
-                            infoElement.style.color = "green"
-                        }
+                        infoElement.textContent = "⚠ Excede tamaño"
+                        infoElement.style.color = "red"
+                    } else {
+                        infoElement.textContent = `Libre: ${freed} MiB`
+                        infoElement.style.color = "green"
+                    }
                 }
 
                 /*if (selectedPart && part.name === selectedPart.name && newSize) {
@@ -447,33 +468,33 @@
         // ---------------- AÑADIR NUEVA ----------------
 
         function addPartition(disk, diskDiv) {
-            if(!todosSelected[disk.name]){
+            if (!todosSelected[disk.name]) {
                 alert("Selecciona la partición a redimensionar antes de añadir una nueva partición")
                 return
-            }else{
+            } else {
                 const selectedPart = todosSelected[disk.name].part;
                 //const radio = document.getElementById(`radio_${selectedPart.name}`);
                 //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-                if(!document.getElementById(`input_${selectedPart.name}`).value.trim()){
+                if (!document.getElementById(`input_${selectedPart.name}`).value.trim()) {
                     alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
                     return
                 }
                 let liberado = bytesToMiB(selectedPart.size) - parseInt(document.getElementById(`input_${selectedPart.name}`).value.trim());
-                if(newParts[disk.name]){
-                    let tamañoTotal=0;
+                if (newParts[disk.name]) {
+                    let tamañoTotal = 0;
                     let seguimos = true;
                     newParts[disk.name].forEach(p => {
                         const sizeInput = document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim();
-                        if(sizeInput==='100%') {
+                        if (sizeInput === '100%') {
                             alert("No se puede añadir una nueva partición si se ha ocupado el 100% del espacio con las presentes.")
-                            seguimos= false;
+                            seguimos = false;
                             return
-                        }                        
+                        }
                         tamañoTotal += parseInt(sizeInput);
-                        
+
                     })
-                    if(!seguimos) return;
-                    if(tamañoTotal >= liberado){
+                    if (!seguimos) return;
+                    if (tamañoTotal >= liberado) {
                         alert("La suma de los tamaños de las nuevas particiones ya ocupa todo el espacio disponible")
                         return
                     }
@@ -485,10 +506,10 @@
             const base = getLastPartNumber(disk)
             const num = base + newParts[disk.name].length + 1
             const sep = getSeparator(disk.name);
-            const prev = num-1;
-            if(prev>base)document.getElementById('remove_'+disk.name + sep + prev).style.visibility = "hidden"; //si se añade una nueva partición sin haber puesto tamaño a la anterior se borra la anterior para evitar confusiones, ya que no se puede añadir una nueva partición si la anterior no tiene tamaño
+            const prev = num - 1;
+            if (prev > base) document.getElementById('remove_' + disk.name + sep + prev).style.visibility = "hidden"; //si se añade una nueva partición sin haber puesto tamaño a la anterior se borra la anterior para evitar confusiones, ya que no se puede añadir una nueva partición si la anterior no tiene tamaño
             const name = disk.path + sep + num;
-            const idName= disk.name + sep + num;
+            const idName = disk.name + sep + num;
             const div = document.createElement("div")
             div.className = "new-part"
 
@@ -518,11 +539,11 @@
                 //const radio = document.getElementById(`radio_${selectedPart.name}`);
                 //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-                if(!document.getElementById(`input_${selectedPart.name}`).value.trim()){
+                if (!document.getElementById(`input_${selectedPart.name}`).value.trim()) {
                     alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
                     return
                 }
-                if(prev>base)document.getElementById(`remove_${disk.name + sep + prev}`).style.visibility = "visible"; //al eliminar la partición se vuelve a mostrar la anterior
+                if (prev > base) document.getElementById(`remove_${disk.name + sep + prev}`).style.visibility = "visible"; //al eliminar la partición se vuelve a mostrar la anterior
                 div.remove()
                 //alert(JSON.stringify(newParts[disk.name]))
                 //newParts[disk.name] = newParts[disk.name].filter(x => x.element !== div)
@@ -558,7 +579,7 @@ set -euo pipefail`;
 
 require_root
 confirm_destruction`;
-        let scriptFunciones=`# =============================
+        let scriptFunciones = `# =============================
 # FUNCIONES
 # =============================
 
@@ -613,10 +634,11 @@ check_partition_NO_exists() {
     exit 1
 }
 `;
-let scriptConfirmar={cabecera:`confirm_destruction() {
+        let scriptConfirmar = {
+            cabecera: `confirm_destruction() {
   echo "=============================================="
   echo "⚠  ADVERTENCIA: Operación potencialmente destructiva"
-  echo "Se modificarán los discos:"`,cuerpo:``,final:`  echo "=============================================="
+  echo "Se modificarán los discos:"`, cuerpo: ``, final: `  echo "=============================================="
   read -rp "Escriba 'CONFIRMAR' para continuar: " confirm
 
   if [[ "$confirm" != "CONFIRMAR" ]]; then
@@ -626,7 +648,7 @@ let scriptConfirmar={cabecera:`confirm_destruction() {
 }
 `}
         function generateScript() {
-            let estadoValores={}
+            let estadoValores = {}
             //todosSelected[disk.name] = {disk, part, input}
             let script = ``;
             //alert("Generando script\n" + JSON.stringify(todosSelected))
@@ -641,7 +663,7 @@ let scriptConfirmar={cabecera:`confirm_destruction() {
                 let PartIni = part.start * part['log-sec'];
                 let PartFin = (part.start * part['log-sec']) + (+part.size - 1);
                 let newSize = parseInt(selected.input.value)
-                estadoValores[disk.name] = {partName: part.name, newSize: selected.input.value, nuevas:[]};
+                estadoValores[disk.name] = { partName: part.name, newSize: selected.input.value, nuevas: [] };
                 //alert('qqqq'+selected.input.id + " = " + selected.input.value+'--'+document.getElementById('radio_'+part.name).checked);
                 if (!newSize) { alert("Indique nuevo tamaño"); return }
 
@@ -659,7 +681,7 @@ let scriptConfirmar={cabecera:`confirm_destruction() {
                 toCreate.forEach((p, i) => {
 
                     //if (i !== toCreate.length - 1)
-                        //alert(disk.path + '..' + `size_${disk.name + getSeparator(disk.name) + p.num}`)
+                    //alert(disk.path + '..' + `size_${disk.name + getSeparator(disk.name) + p.num}`)
                     requested += parseInt(document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim())
                     //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
                 })
@@ -683,13 +705,13 @@ unmount_if_mounted "${disk.path}${getSeparator(disk.name)}${partNumber}"
                 script += `
 DISK="${disk.path}"
 echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
-# 2️⃣ Verificar filesystem si es ext4${part.fstype === 'ext4' ? `\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}`:''}
+# 2️⃣ Verificar filesystem si es ext4${part.fstype === 'ext4' ? `\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}` : ''}
 # 3️⃣ Reducir el filesystem
 ${part.fstype === 'ntfs' ? textoNTFS : ''}${part.fstype === 'ext4' ? textoExt4 : ''}
 parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
 partprobe "$DISK"
 sleep 2
-# 6️⃣ Verificación final${part.fstype === 'ext4' ? `\n#e2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}`:''}
+# 6️⃣ Verificación final${part.fstype === 'ext4' ? `\n#e2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}` : ''}
 
 `
                 //sgdisk -n 14:204800:409599 "$DISK" los numeros son en sectores, no en MiB, por eso se multiplica por 1024*1024 y se resta a PartFin para que la nueva partición quede al final del espacio liberado
@@ -701,14 +723,14 @@ sleep 2
                     let sectorFin = sectorIni + (size * 1024 * 1024 / part['log-sec']) - 1;
                     newIni = newIni + (size * 1024 * 1024);
                     const fs = p.element.querySelector("select").value
-                    estadoValores[disk.name].nuevas.push({name: (disk.name + getSeparator(disk.name) + p.num), size: document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim(), label: label, fs: fs});
+                    estadoValores[disk.name].nuevas.push({ name: (disk.name + getSeparator(disk.name) + p.num), size: document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim(), label: label, fs: fs });
                     //alert(`Creando partición ${p.num} desde sector ${sectorIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
-                    let textoFs='';
-                    if(fs === 'ntfs'||fs === 'vfat'){
-                         textoFs = `\nsgdisk -t ${p.num}:0700 "$DISK"`
-                         if(label==='EFI'&&fs === 'vfat') textoFs = `\nsgdisk -t ${p.num}:EF00 "$DISK"`
+                    let textoFs = '';
+                    if (fs === 'ntfs' || fs === 'vfat') {
+                        textoFs = `\nsgdisk -t ${p.num}:0700 "$DISK"`
+                        if (label === 'EFI' && fs === 'vfat') textoFs = `\nsgdisk -t ${p.num}:EF00 "$DISK"`
                     }
-                    
+
                     if (i === toCreate.length - 1) {
                         sectorFin = (PartFin + 1) / part['log-sec'] - 1;
                         script += `\necho "Creando partición final"
@@ -726,11 +748,11 @@ sleep 1
 DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
 `                   ;
                     textoFs = '';
-                    if(label){                          
-                            if(fs === 'vfat') textoFs = `-n ${label}`;
-                            if(fs === 'ntfs') textoFs = `--label ${label}`;       
+                    if (label) {
+                        if (fs === 'vfat') textoFs = `-n ${label}`;
+                        if (fs === 'ntfs') textoFs = `--label ${label}`;
                     }
-                    
+
                     if (fs === "ext4") script += `mkfs.ext4 -F "$DEV"\n`
                     if (fs === "ntfs") script += `mkfs.ntfs --fast ${textoFs} "$DEV"\n`
                     if (fs === "vfat") script += `mkfs.vfat -F32 ${textoFs} "$DEV"\n`
@@ -748,7 +770,7 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
             script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
             download(script, "oem_partition_script.sh")
             //guardar estado para clonar
-            download(JSON.stringify({newParts:newParts,/*todosSelected:todosSelected, container:document.getElementById('disks').innerHTML,*/ data, estadoValores}), 'Estado.json')
+            download(JSON.stringify({ newParts: newParts,/*todosSelected:todosSelected, container:document.getElementById('disks').innerHTML,*/ data, estadoValores }), 'Estado.json')
             //para clonar
             originalState = JSON.parse(JSON.stringify(data))
             alert("Estado base guardado. Ahora puedes aplicar el script y cargar el nuevo JSON para modo CLON.")
@@ -778,15 +800,15 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
 
                 const reader = new FileReader()
                 reader.onload = evt => {
-                let cabeceraScript = `#!/bin/bash
+                    let cabeceraScript = `#!/bin/bash
 set -euo pipefail`;
-        let ejecucionScript = `# =============================
+                    let ejecucionScript = `# =============================
 # EJECUCIÓN
 # =============================
 
 require_root
 confirm_destruction`;
-        let scriptFunciones=`# =============================
+                    let scriptFunciones = `# =============================
 # FUNCIONES
 # =============================
 
@@ -856,10 +878,11 @@ check_partuuid_conflict() {
     exit 1
   fi
 }`;
-let scriptConfirmar={cabecera:`confirm_destruction() {
+                    let scriptConfirmar = {
+                        cabecera: `confirm_destruction() {
   echo "=============================================="
   echo "⚠  ADVERTENCIA: Operación potencialmente destructiva"
-  echo "Se modificarán los discos:"`,cuerpo:``,final:`  echo "=============================================="
+  echo "Se modificarán los discos:"`, cuerpo: ``, final: `  echo "=============================================="
   read -rp "Escriba 'CONFIRMAR' para continuar: " confirm
 
   if [[ "$confirm" != "CONFIRMAR" ]]; then
@@ -903,8 +926,8 @@ unmount_if_mounted "${disk.path}${getSeparator(disk.name)}${partNumber}"`;
                         script += `#echo "Modo CLON OEM"
 
 DISK="${disk.path}"
-${part.fstype === 'ext4' ? `# 2️⃣ Verificar filesystem si es ext4\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}`:''}
-echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"${part.fstype === 'ntfs' ? '\n'+textoNTFS : ''}${part.fstype === 'ext4' ? '\n'+textoExt4 : ''}
+${part.fstype === 'ext4' ? `# 2️⃣ Verificar filesystem si es ext4\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}` : ''}
+echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"${part.fstype === 'ntfs' ? '\n' + textoNTFS : ''}${part.fstype === 'ext4' ? '\n' + textoExt4 : ''}
 #parted "$DISK" resizepart ${partNumber} "${newSize}MiB"
 parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
 partprobe "$DISK"
@@ -951,11 +974,11 @@ fi
 `
                                 let sectorIni = part.start;
                                 let sectorFin = part.start + (part.size / part['log-sec']) - 1
-                                let textoFs='';
-                    if(part.fstype === 'ntfs'||part.fstype === 'vfat'){
-                         textoFs = `\nsgdisk -t ${num}:0700 ${newDisk.path}`
-                         if(part.label==='EFI'&&part.fstype === 'vfat') textoFs = `\nsgdisk -t ${num}:EF00 ${newDisk.path}`
-                    }
+                                let textoFs = '';
+                                if (part.fstype === 'ntfs' || part.fstype === 'vfat') {
+                                    textoFs = `\nsgdisk -t ${num}:0700 ${newDisk.path}`
+                                    if (part.label === 'EFI' && part.fstype === 'vfat') textoFs = `\nsgdisk -t ${num}:EF00 ${newDisk.path}`
+                                }
                                 ejecucionScript += `\n
 check_partition_exists "/dev/${part.name}"
 check_uuid_conflict "${part.uuid}"
@@ -970,7 +993,7 @@ sgdisk -u ${num}:${part.partuuid} ${newDisk.path}
 partprobe ${newDisk.path}
 sleep 1
 `
-                            
+
                                 if (part.fstype === "ext4")
                                     script += `mkfs.ext4 -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
 
@@ -978,7 +1001,7 @@ sleep 1
 
                                 if (part.fstype === "vfat") {
                                     let labelSinGion = part.uuid.replace(/-/g, '');
-                                    if(part.label) textoFs = `-n ${part.label}`;
+                                    if (part.label) textoFs = `-n ${part.label}`;
                                     else textoFs = '';
                                     script += `mkfs.vfat -F32 ${textoFs} -i ${labelSinGion} ${newDisk.path}${sep}${num}\n`
                                     //script += `mkfs.vfat ${newDisk.path}${sep}${num}\nfatlabel ${newDisk.path}${sep}${num} "${part.label || ""}"\n`
@@ -1004,7 +1027,7 @@ sleep 1
                                     //script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
                                     script += `ntfslabel --new-serial=${part.uuid} ${newDisk.path}${sep}${num}\n`
 
-                                
+
                             }
                         })
                     })
