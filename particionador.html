@@ -55,18 +55,31 @@
 
 <body>
 
-    <h2>OEM GPT Partition Tool PRO</h2>
-    <p>Abre una consola en el escritorio y ejecuta la orden:<br>
-        <b>lsblk -J -b -o
+    <h2 style="text-align: center;">Herramienta para particionar discos GPT.</h2>
+    <p style="color:rgb(5, 5, 67); text-align: center;">Útil para crear las particiones necesarias para instalar SRP en varios equipos iguales creados con la mimsma maqueta.</p>
+    <p style="text-align: justify;">Abre una consola en el escritorio y ejecuta la orden:<br>
+        <br><b>lsblk -J -b -o
             NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC >
-            bloques.json</b>
-        <br>y carga el archivo bloques.json
+            bloques.json</b><br>
+        <br>el archivo bloques.json tiene la información de los discos y particiones del sistema,
+        Cárgalo en esta herramienta para crear un script (<b>particionador.sh</b>) que ejecutado en una terminal, genere espacio libre
+        a partir de una partición grande presente en un disco, reduciéndola por su final y en el espacio liberado 
+        se puede crear nuevas particiones que se precisen.(si el equipo tiene varios discos, se puede generar espacio a partir de una particion por disco)<br>
     </p>
-    <input type="file" id="fileInput">
+    Boton de carga de bloques.json<input type="file" id="fileInput">
     <div id="disks"></div>
-    <button onclick="generateScript()">Generar Script OEM</button>
-    <button onclick="generateCloneScriptUNO()">Generar Script CLON con UUIDs</button>
+    <button onclick="generateScript()">Generar el script particionador.sh</button>
+    <p style="color:darkblue; text-align: justify;" >Tras ejecutar el script particionador.sh, habrá creado las particiones configuradas, si deseamos que en los demás equipos se creen con las mismas UUIDs que en este, deberemos obtener un nuevo <b>bloques.json</b>. Ejecutando de nuevo la orden lsblk ..., si cargamos el nuevo archivo bloques.json obtenido con el botón siguiente en el <b>navegador ya configurado</b> obtendremos el archivo <b>particionadorUUIDs_clone.sh</b>. Ejecutando ese script en equipos clon de este nos creara las mismas nuevas particiones con los mismos UUIDs y PartUUIDs (a diferencia de particionador.sh en que los UUIDs y PartUUIDs se asignanal azar).<br>
+    Botón para cargar el bloques.json nuevo y <button onclick="generateCloneScriptUNO()">Generar script particionador con las UUIDs iguales del primer equipo</button>
+    </p>
+    <p style="color:rgb(79, 4, 4); text-align: justify;" >
+        Al descargar <b>particionador.sh</b> se descarga a la vez <b>Estado.json</b> un archivo con la información de bloques.json y los datos que introdujimos para configurar particiones a redimensionar y nuevas a crear. Para <u>generar particionadorUUIDs_clone.sh se precisa que el navegador esté configurado</u> y si por error recargamos la página antes de leer el nuevo archivo bloques.json se perdería esa información. Para evitar que se tuviera que rehacer manualmente <b>se puede recuperar el navegador completamente configurado cargando <u>Estado.json</u></b> con el siguiente botón.<br>
     Carga estado guardado: <input type="file" id="fileInputLoadState">
+    </p>
+    <p style="color:red; text-align: justify;" >
+            ⚠️ ADVERTENCIA: Esta herramienta genera scripts (particionador.sh y particionadorUUIDs_clone.sh) que <b>cuando <u>se ejecutan</u></b> modifican las particiones del disco. Ese proceso puede ocasionar pérdida de datos. Es necesario que se haya creado una copia de seguridad de los discos mediante una herramienta como clonezilla.<br> 
+            <span style="color:darkgreen"><b>Generar con esta herramienta los scripts</b>, que solo contienen texto con ordenes basch, <b>no tiene ningun peligro sobre los discos</b>.</span> Las precauciones se deben tomar al ejecutarlos.
+    </p >
     <script>
         //para clonar
         let originalState = null

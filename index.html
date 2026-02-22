@@ -87,7 +87,7 @@
             </select></span>TRAS HABER CREADO Y CONFIGURADO LAS PARTICIONES NECESARIAS CON GPARTED<br />
         Abre una consola en el escritorio y ejecuta la orden:<br />
         <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lsblk -J -b -o
-            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL > bloques.json</b><br />
+            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC > bloques.json</b><br />
         y carga el archivo <u>bloques.json</u> con el siguiente botón <u>para identificar correctamente los discos y
             particiones</u> en sistemas con NVMe, SATA.... <u>y cargarlos en el configurador</u><br />
         <input type="file" id="fileInputDisco" accept=".json">
