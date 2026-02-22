@@ -3,426 +3,1018 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Particiones</title>
+    <title>OEM GPT Partition Tool PRO</title>
+
     <style>
         body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
+            font-family: Arial;
+            background: #f4f6f8;
+            margin: 20px
         }
 
-        .container {
-            max-width: 600px;
-            margin: auto;
+        .disk {
+            background: white;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08)
         }
 
-        .disk-section,
-        .partition-section {
-            margin-bottom: 20px;
+        svg {
+            width: 100%;
+            height: 55px;
+            margin-bottom: 10px
         }
 
-        .partition-list div {
+        .partition-row {
             display: flex;
             align-items: center;
+            gap: 12px;
+            margin-bottom: 6px
+        }
+
+        .new-part {
+            display: flex;
             gap: 10px;
-            margin-bottom: 5px;
+            margin-top: 6px;
+            align-items: center
         }
 
         button {
-            cursor: pointer;
+            padding: 6px 12px;
+            margin-top: 10px;
+            cursor: pointer
+        }
+
+        .free-info {
+            font-weight: bold;
+            margin-left: 10px
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h2>Gestión de Particiones</h2>
-        <div class="disk-section">
-            <label for="diskCount">Número de Discos:</label>
-            <input type="number" id="diskCount" min="1" value="1" max="5">
-            <button onclick="setDisks()">Establecer</button>
-        </div>
-        <div id="disks"></div>
-        <!-- Selecciona archivo particiones.txt -->
-        <label><input type="checkbox" id="chkUUID"
-                title="Si se selecciona se deben cargar las UUIDs de las particiones de cada equipo a instalar el SRP" />
-            Usar UUID</label>
-        <span id="uuidSection" style="display:none;">
-            Ejecuta en una terminal la orden: <b>blkid -s UUID>particiones.txt</b>
-            <button id="selectPartBtn">Buscar particiones.txt</button>
-            <input id="partFileInput" type="file" accept=".txt,text/plain" style="display:none" /></span>
-        </p><button onclick="calculateNewPartitions()">Generar</button>
-    </div>
-    <span id="cargarConfResultado" style="visibility: hidden;">
-        <p>Estado: <span id="status">No hay archivo seleccionado</span></p>
-        <p>Nombre del archivo: <strong id="fileName">—</strong></p>
 
-        <h3>Contenido (si se pudo leer)</h3>
-        <pre id="fileContent">—</pre>
-    </span>
-
+    <h2>OEM GPT Partition Tool PRO</h2>
+    <p>Abre una consola en el escritorio y ejecuta la orden:<br>
+        <b>lsblk -J -b -o
+            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC >
+            bloques.json</b>
+        <br>y carga el archivo bloques.json
+    </p>
+    <input type="file" id="fileInput">
+    <div id="disks"></div>
+    <button onclick="generateScript()">Generar Script OEM</button>
+    <button onclick="generateCloneScriptUNO()">Generar Script CLON con UUIDs</button>
+    Carga estado guardado: <input type="file" id="fileInputLoadState">
     <script>
-        //////////////////
-        let configuraciónContenido = null; // contiene el texto del archivo (string)
+        //para clonar
+        let originalState = null
+        let clonedState = null
+        //fin para clonar
 
-        const selectBtn = document.getElementById('selectBtn');
-        const fileInput = document.getElementById('fileInput');
-        const statusEl = document.getElementById('status');
-        const fileNameEl = document.getElementById('fileName');
-        const fileContentEl = document.getElementById('fileContent');
-        // Mostrar/ocultar botón según checkbox
-        const chkUUID = document.getElementById('chkUUID');
-        chkUUID.addEventListener('change', () => {
-            //configuracion.usarUUID = chkUUID.checked;
-            selectPartBtn.style.display = chkUUID.checked ? 'inline-block' : 'none';
-            document.getElementById('uuidSection').style.display = chkUUID.checked ? 'inline' : 'none';
-        });
+        let data
+        let selected = null
+        let todosSelected = {};
+        let newParts = {}
+        //let partActivada=''
 
-        selectPartBtn.addEventListener('click', () => partFileInput.click());
+        // ---------------- UTILIDADES ----------------
+        //todosSelected[disk.name] = { disk, part, input }
+        const guardaConfiguracion = () => {
 
-        partFileInput.addEventListener('change', async () => {
-            const file = partFileInput.files[0];
-            if (!file) return;
-            document.getElementById('cargarConfResultado').style.visibility = 'visible';
-            // Comprobamos el nombre exacto solicitado
-            const expectedName = 'particiones.txt';
-            if (file.name !== expectedName) {
-                alert('El archivo debe llamarse ' + expectedName);
-                statusEl.textContent = 'Archivo incorrecto: se esperaba "' + expectedName + '" no "' + file.name + '".';
-                statusEl.className = 'err';
-                fileNameEl.textContent = file.name;
-                fileContentEl.textContent = 'El archivo seleccionado no se llama "' + expectedName + '".';
-                // Limpiamos la selección para permitir volver a elegir el mismo archivo si se desea
-                //fileInput.value = '';
-                partFileInput.value = '';
+            localStorage.setItem("todosSelected", JSON.stringify(todosSelected))
+            localStorage.setItem("newParts", JSON.stringify(newParts))
+        }
 
+        function bytesToMiB(b) { return Math.floor(b / 1024 / 1024) }
 
+        function getSeparator(name) {
+            if (name.startsWith("nvme") || name.startsWith("mmc"))
+                return "p"
+            return ""
+        }
 
-                return;
+        function getLastPartNumber(disk) {
+            if (!disk.children) return 0
+            let nums = disk.children.map(p => {
+                const m = p.name.match(/(\d+)$/)
+                return m ? parseInt(m[1]) : 0
+            })
+            return Math.max(...nums)
+        }
+
+        function getFsColor(fs) {
+            switch (fs) {
+                case "ext4": return "#4CAF50"
+                case "ntfs": return "#2196F3"
+                case "vfat": return "#FF9800"
+                case "swap": return "#9C27B0"
+                default: return "#9E9E9E"
             }
-            statusEl.textContent = 'Archivo válido seleccionado';
-            statusEl.className = 'ok';
-            fileNameEl.textContent = file.name;
+        }
 
-            try {
-                // Leer contenido como texto (File.text() devuelve una Promise)
-                particionesContenido = await file.text();
-                fileContentEl.textContent = particionesContenido;
-                asignarUUIDs();
-            } catch (err) {
-                fileContentEl.textContent = 'Error leyendo el archivo: ' + err;
+        function drawRect(svg, x, width, fill, stroke, strokeWidth = 0) {
+            const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
+            rect.setAttribute("x", x + "%")
+            rect.setAttribute("width", width + "%")
+            rect.setAttribute("height", "40")
+            rect.setAttribute("rx", "8")
+            rect.setAttribute("ry", "8")
+            rect.setAttribute("fill", fill)
+            rect.setAttribute("stroke", stroke)
+            rect.setAttribute("stroke-width", strokeWidth)
+            svg.appendChild(rect)
+        }
+
+        // ---------------- CARGA ----------------
+
+        document.getElementById("fileInput").addEventListener("change", e => {
+            const reader = new FileReader()
+            reader.onload = evt => {
+                //reiniciamos todo:
+                //para clonar
+                originalState = null
+                clonedState = null
+                //fin para clonar
+
+                data = null
+                selected = null
+                todosSelected = {};
+                newParts = {}
+                data = JSON.parse(evt.target.result);
+                data.blockdevices.forEach(d => {
+                    if (d.type === "disk" && d.children)
+                        d.children.sort((a, b) => a.start - b.start)
+                })
+                render()
             }
+            reader.readAsText(e.target.files[0])
+        })
 
-            //particionesContenido = await file.text();
-
-            //asignarUUIDs();
-        });
-        let mapaUUID = {};
-        let arrUUID = [];
-        function asignarUUIDs() {
-            mapaUUID = {};
-            arrUUID = [];
-            /*if (!configuraciónContenido) {
-              alert('Primero carga configuración.txt');
-              return;
-            }*/
-            if (!particionesContenido) {
-                alert('Primero carga particiones.txt');
-                return;
-            }
-
-            let conf;
-            /*try {
-                //conf = JSON.parse(configuraciónContenido);
-                conf = configuracion;
-            } catch (e) {
-                alert('Error al parsear configuración: ' + e);
-                return;
-            }*/
-
-            const lineas = particionesContenido.split("\n").filter(l => l.trim() !== "");
-
-            for (const l of lineas) {
-                const partes = l.split(':');
-                if (partes.length >= 2) {
-                    const dev = partes[0].trim();
-                    const uuid = partes[1].trim();
-                    mapaUUID[dev] = uuid;
-                    arrUUID.push(uuid);
-                }
-            }
-            alert(JSON.stringify(mapaUUID, null, 2));
-            let error = false
-            arrUUID.forEach((uuid, index) => {
-                for (let j = 0; j < index; j++) {
-                    if (arrUUID[j] === uuid) {
-                        alert('Atención: La UUID ' + uuid + ' está duplicada en el archivo particiones.txt');
-                        error = true;
-                        return;
+        document.getElementById("fileInputLoadState").addEventListener("change", e => {
+            const reader = new FileReader()
+            reader.onload = evt => {
+                if(data) {
+                    if(!confirm("Cargar un estado guardado perderá los cambios no guardados actuales. ¿Desea continuar?")) {
+                        return
                     }
                 }
-            });
-            if (error) return;
+                //reiniciamos todo:
+                //para clonar
+                originalState = null
+                clonedState = null
+                //fin para clonar
 
-            /*for (const part of conf.particiones) {
-                for (const key of Object.keys(part)) {
-                    if (key.startsWith('particion')) {
-                        const p = part[key];
-                        p.UUID = null; // resetear antes
-                        if (p.activa) {
-                            const nombreDev = `/dev/sd${p.disco}${p.particion}`;
-                            if (mapaUUID[nombreDev]) {
-                                p.UUID = mapaUUID[nombreDev].split('"')[1];
-                            } else {
-                                p.UUID = null;
-                            }
-                        }
-                    }
+                data = null
+                selected = null
+                todosSelected = {};
+                newParts = {}
+
+                const savedState = JSON.parse(evt.target.result)
+                data = savedState.data || data
+                originalState = JSON.parse(JSON.stringify(data))
+                data.blockdevices.forEach(d => {
+                    if (d.type === "disk" && d.children)
+                        d.children.sort((a, b) => a.start - b.start)
+                })
+                render();
+                //Añadimos las selecciones y nuevas particiones guardadas al estado actual
+                let estadoValores = savedState.estadoValores || {}
+                for (let diskName in estadoValores) {
+                    let partName = estadoValores[diskName].partName;
+                    let radio = document.getElementById('radio_' + partName);
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event("click", { bubbles: true }));
+                    let input = document.getElementById('input_' + partName);
+                    input.value = estadoValores[diskName].newSize;
+                    input.dispatchEvent(new Event("input", { bubbles: true }));
+                    let nuevas = estadoValores[diskName].nuevas || [];
+                    nuevas.forEach(nueva => {
+                        let butonAdd = document.getElementById('add_' + diskName);
+                        butonAdd.dispatchEvent(new Event('click', { bubbles: true }));
+                        let select = document.getElementById(`fs_${nueva.name}`);
+                        select.value = nueva.fs;
+                        document.getElementById(`size_${nueva.name}`).value = nueva.size;
+                        document.getElementById(`label_${nueva.name}`).value = nueva.label;
+                        document.getElementById(`size_${nueva.name}`).dispatchEvent(new Event("input", { bubbles: true }));
+                        document.getElementById(`label_${nueva.name}`).dispatchEvent(new Event("input", { bubbles: true }));
+                        //select.dispatchEvent(new Event("change", { bubbles: true }));
+                    })
                 }
+
+               
             }
-            cargarTabs();
-            seHaCargadoUUIDsFile = true;
-            console.log('Configuración actualizada:', conf)*/;
+            reader.readAsText(e.target.files[0])
+        })
 
-        }
-        ///////////////
-        function setDisks() {
-            const diskContainer = document.getElementById('disks');
-            diskContainer.innerHTML = '';
-            const diskCount = document.getElementById('diskCount').value;
-            for (let i = 1; i <= diskCount; i++) {
-                const diskDiv = document.createElement('div');
-                diskDiv.classList.add('disk-section');
-                diskDiv.innerHTML = `
-                    <h3>Disco ${i}</h3>
-                    <label>Tipo de Tabla de Particiones:</label>
-                    <select id="tp${i}">                        
-                        <option value="gpt">gpt</option>
-                        <!--<option value="msdos">msdos</option>-->
-                    </select>
-                    <div class="partition-section">
-                        <h4>Particiones Presentes</h4>
-                        <button onclick="addPartition(this, 'present', ${i})">+</button>
-                        <div class="partition-list"></div>
-                    </div>
-                    <div class="partition-section">
-                        <h4>Particiones Nuevas</h4>
-                        <button onclick="addPartition(this, 'new', ${i})">+</button>
-                        <div class="partition-list"></div>
-                    </div>
-                `;
-                diskContainer.appendChild(diskDiv);
-            }
-        }
+        // ---------------- RENDER ----------------
+        let maxSize = 0;
+        function render() {
+            const container = document.getElementById("disks")
+            container.innerHTML = ""
 
-        function addPartition(button, type, disk) {
-            const partitionContainer = button.nextElementSibling;
-            const existingPartitions = partitionContainer.children.length;
-            const presentPartitions = button.closest('.disk-section').querySelector('.partition-section .partition-list').children.length;
-            let partitionNumber;
-            let letra = 'a';
-            let tipoTabPart = document.getElementById(`tp${disk}`).value;
-            switch (disk) {
-                case 1:
-                    letra = 'a';
-                    break;
-                case 2:
-                    letra = 'b';
-                    break;
-                case 3:
-                    letra = 'c';
-                    break;
-                case 4:
-                    letra = 'd';
-                    break;
-                case 5:
-                    letra = 'e';
-                    break;
-            }
+            data.blockdevices.forEach(disk => {
+                if (disk.type !== "disk") return
 
-            if (type === 'present') {
-                partitionNumber = presentPartitions + 1;
-            } else {
-                partitionNumber = presentPartitions + existingPartitions + 1;
-            }
+                const diskDiv = document.createElement("div")
+                diskDiv.className = "disk"
 
-            const partitionDiv = document.createElement('div');
-            let optionPresent = `<option value="ntfs">ntfs</option>
-                    <option value="fat32">fat32</option>
-                    <option value="otro">otro</option>`;
-            let optionNew = `<option value="ext4">ext4</option>
-                    <option value="ntfs">ntfs</option>
-                    <option value="fat32">fat32</option>                 
-                    <option value="linux-swap">linux-swap</option>
-                    ${tipoTabPart === 'msdos' ? '<option value="partición extendida">partición extendida</option>' : ''}`;
-            partitionDiv.innerHTML = `
-                <label> sd${letra + partitionNumber} </label>
-                <select id="fs${letra + partitionNumber}">
-                    ${type === 'present' ? optionPresent : optionNew}
-                </select>
-                tamaño: <input id="sd${letra + partitionNumber}" type="text" placeholder="Tamaño" ${type === 'new' ? 'value="100%"' : ''}>MiB
-                ${type === 'new' ? `<input type="text" id="et${letra + partitionNumber}" placeholder="Etiqueta">` : ` <input type="radio" name="PartaAreducir${letra}" value="${letra + partitionNumber}"> sd${letra + partitionNumber}`}
-                <button onclick="this.parentElement.remove()">Eliminar</button>
-            `;
-            partitionContainer.appendChild(partitionDiv);
-        }
+                diskDiv.innerHTML = `<h3>${disk.path} (${bytesToMiB(disk.size)} MiB)</h3>`
 
-        function calculateNewPartitions() {
-            let nSRP = 0;
-            let nSRPBACKUP = 0;
-            let mensajes = '';
-            let ndiscos = document.getElementById('diskCount').value * 1;
-            let scripts = [];
-            let textoScripts = '#!/bin/bash\n\n';
-            let errores = '';
-            //let partRedimensionar = 0;
-            let partLinusSwap = 0;
-            
-            for (let i = 1; i <= ndiscos; i++) {
-                let uuid_xxx='';
-                let tDiscSize = 0;
-                let totalSize = 0;
-                let hastaReducir = 0;
-                let sumamos = true;
-                let letra = ['a', 'b', 'c', 'd', 'e'][i - 1];
-                let PartaAreducir = obtenerSeleccion('PartaAreducir' + letra);
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
+                svg.setAttribute("data-disk", disk.name)
+                diskDiv.appendChild(svg)
 
-                let disk = `"/dev/sd${letra}"`;
-                let win_part = '"sd' + `${PartaAreducir}"`;
-                //let UUID_win_part =   mapaUUID['+letra + PartaAreducir'] ? `"${mapaUUID[letra + PartaAreducir]}"` : '""';
+                disk.children?.forEach(part => {
+                    const sizeMiB = bytesToMiB(part.size)
 
-                if (PartaAreducir === -1) errores += `No se ha seleccionado ninguna partición a redimensionar en el disco ${letra}.\n`;
-                scripts[i - 1] = `###### Disco="/dev/sd${letra}" ######\n`;
-                let cola = `\n# Formatear las nuevas particiones de sd${letra}\n`
-                for (let j = 1; j < 128; j++) {
-                    let MBs = 0
-                    if (document.getElementById(`sd${letra + j}`)) {
-                        let value = document.getElementById(`sd${letra + j}`).value.trim();
+                    const row = document.createElement("div")
+                    row.className = "partition-row";
+                    let visbilidad = ''
+                    if (!(part.fstype === 'ntfs' || part.fstype === 'ext4')) visbilidad = 'style="visibility:hidden"'
+                    row.innerHTML = `
+        <input type="radio" id="radio_${part.name}" name="resize-${disk.name}" ${visbilidad}>
+        ${part.path} (${part.fstype || "sin fs"}) ${sizeMiB} MiB
+        <span id="span_${part.name}" style="display:none">
+          Nuevo tamaño MiB:
+          <input id="input_${part.name}" type="number" min="1" style="width:80px">
+          <span class="free-info" id="info_${part.name}"></span>
+        </span>
+      `
 
-                        if (value !== "100%" && value !== "") {
-                            MBs = parseInt(value) || 0;
-                            //totalSize += MBs;
-                        }
-                        tDiscSize += MBs;
-                        let fs = document.getElementById(`fs${letra + j}`).value;
-                        if (document.getElementById(`et${letra + j}`)) {
-                            totalSize += MBs;
-                            let etiqueta = document.getElementById(`et${letra + j}`).value.trim();
-                            if (etiqueta === 'SRP') nSRP++;
-                            if (etiqueta === 'SRPBACKUP') nSRPBACKUP++;
-                            if (value !== "100%" && value !== "") {
-                                scripts[i - 1] += `#    sd${letra + j + ': ' + etiqueta} tamaño: ${MBs}MiB o ${Math.round(MBs * 100 / 1024) / 100}GiB \n`;
-                                scripts[i - 1] += `parted --fix /dev/sd${letra} mkpart "${etiqueta}" ${fs} ${totalSize - MBs + hastaReducir}MiB ${totalSize + hastaReducir}MiB \n`;
+                    const radio = row.querySelector("input")
+                    const span = row.querySelector("span")
+                    span.setAttribute("disco", disk.name)
+                    const input = row.querySelector("input[type=number]")
+                    const info = row.querySelector(".free-info")
+
+                    //radio.addEventListener("change", () => {
+                    radio.addEventListener("click", () => {
+                        //localStorage.setItem("todosSelected", JSON.stringify(todosSelected))
+                        //localStorage.setItem("newParts", JSON.stringify(newParts))
+                        if(todosSelected[disk.name] && todosSelected[disk.name]&&todosSelected[disk.name].part.name !== part.name&&newParts[disk.name]&&newParts[disk.name].length>0) {
+                            if(confirm("Cambiar de partición seleccionada perderá los cambios planificados en la partición actualmente seleccionada " + todosSelected[disk.name].part.name + ". ¿Desea continuar?")) {
+                                //alert("Partición seleccionada: " + part.name)
                             } else {
-                                scripts[i - 1] += `#    sd${letra + j + ': ' + etiqueta} tamaño: el que queda libre \n`;
-                                scripts[i - 1] += `parted --fix /dev/sd${letra} mkpart "${etiqueta}" ${fs} ${totalSize + hastaReducir}MiB 100%\n`;
+                                document.getElementById(`radio_${todosSelected[disk.name].part.name}`).checked = true;
+                                return;    
                             }
-                            if (fs === 'linux-swap') {
-                                if (mapaUUID['/dev/sd' + letra + j]) {
-                                    uuid_xxx += 'UUID_SWAP=' + mapaUUID['/dev/sd' + letra + j].split('UUID=')[1] + '\n';
-                                    cola += `mkswap -U "$UUID_SWAP" /dev/sd${letra}${j}`;
-                                    etiqueta === '' ? cola += '\n' : cola += ` -L ${etiqueta}\n`
-                                } else {
-                                    cola += `mkswap /dev/sd${letra}${j}`;
-                                    etiqueta === '' ? cola += '\n' : cola += ` -L ${etiqueta}\n`
-                                }
-                                partLinusSwap++;
-                            }
-                            else {
-                                if (mapaUUID['/dev/sd' + letra + j]) {
-                                    uuid_xxx += 'UUID_' + etiqueta + '=' + mapaUUID['/dev/sd' + letra + j].split('UUID=')[1] + '\n';
-                                    cola += `mkfs.${fs} -U "$UUID_${etiqueta}" /dev/sd${letra}${j}${fs === 'ntfs' ? ' --fast' : ''}`;
-                                    etiqueta === '' ? cola += '\n' : cola += ` -L ${etiqueta}\n`;
-                                } else {
-                                    cola += `mkfs.${fs} /dev/sd${letra}${j}${fs === 'ntfs' ? ' --fast' : ''}`;
-                                    etiqueta === '' ? cola += '\n' : cola += ` -L ${etiqueta}\n`;
-                                }
+                        }
+                            //alert("Partición deseleccionada: " + part.name)
+                            //delete todosSelected[disk.name]
+                        document.querySelectorAll(".partition-row span").forEach(s => {
+                            if (s.getAttribute("disco") === disk.name)
+                                s.style.display = "none"
+                        })
+                        span.style.display = "inline"
+                        selected = { disk, part, input }
+                        
+                        if (todosSelected[disk.name]) {
+                            if (todosSelected[disk.name].part.name !== part.name) {
+                                //alert("Partición seleccionada: " + part.name)
+                                if (newParts[disk.name]) newParts[disk.name].forEach(p => p.element.remove())
+                                newParts[disk.name] = [];
+                                //redrawDisk(disk)
                             }
 
+                        }
+                        todosSelected[disk.name] = { disk, part, input }
+
+                        //if (newParts[disk.name]) newParts[disk.name].forEach(p => p.element.remove())
+                        //div.remove()
+                        //newParts[disk.name] = []
+                        redrawDisk(disk)
+                    })
+
+                    input.addEventListener("input", () => {//alert(input.value);
+                        //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                        const free = sizeMiB - parseInt(input.value || 0)
+                        if (free < 0) {
+                            info.textContent = "⚠ Excede tamaño"
+                            info.style.color = "red"
                         } else {
-                            if (MBs > 0) {
-                                if (PartaAreducir === letra + j) {
-                                    if (fs !== 'ntfs') errores += `La partición a redimensionar sd${letra + j} no es de tipo ntfs.\n`;
-                                    totalSize += MBs;
-                                    sumamos = false;
-                                    MBdec = Math.floor(MBs * 1.024 * 1.024);//0.953674);
-                                    //partRedimensionar++;
-                                    scripts[i - 1] += `# WIN_PART=sd${letra + j}
-#NEW_WIN_SIZE="${MBs}MiB"  # ${Math.round(MBs * 100 / 1024) / 100}GiB
+                            info.textContent = `Libre: ${free} MiB`
+                            info.style.color = "green"
+                        }
+                        redrawDisk(disk)
+                    })
 
-# Redimensionar la partición de Windows a ${MBs}MiB ${Math.round(MBs * 100 / 1024) / 100}GiB; ${MBdec}MB
-ntfsresize --size ${MBdec}M --force --force /dev/sd${letra + j}
+                    diskDiv.appendChild(row)
+                })
 
-# Usar parted para redimensionar y crear nuevas particiones en MiB
-echo "Redimensionando partición de Windows y creando nuevas particiones..."
-parted --fix /dev/sd${letra} resizepart ${j} ${MBs + hastaReducir}MiB
-ntfsfix /dev/sd${letra}${j}
+                const addBtn = document.createElement("button")
+                addBtn.textContent = "+ Añadir partición"
+                addBtn.onclick = () => addPartition(disk, diskDiv)
+                addBtn.id = `add_${disk.name}`
+                diskDiv.appendChild(addBtn)
+                container.appendChild(diskDiv)
+
+                redrawDisk(disk)
+            })
+        }
+
+        // ---------------- REDIBUJAR SVG ----------------
+
+        function redrawDisk(disk) {
+            if (todosSelected[disk.name] && selected && selected.disk.name !== disk.name) {
+                const selectedPart = todosSelected[disk.name].part;
+                const radio = document.getElementById(`radio_${selectedPart.name}`);
+                radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            }
+            const svg = document.querySelector(`svg[data-disk='${disk.name}']`)
+            if (!svg) return
+
+            svg.innerHTML = ""
+
+            const totalMiB = bytesToMiB(disk.size)
+            /*if (maxSize < totalMiB)*/ maxSize = totalMiB;
+            let xPercent = 0
+
+            const selectedPart = selected?.disk?.name === disk.name ? selected.part : null
+            const newSize = selected?.input ? parseInt(selected.input.value || 0) : null
+            let Hasta100 = 100;
+            let freed = 0;
+            let ocupado = 0;
+            disk.children?.forEach(part => {
+                let sizeMiB = bytesToMiB(part.size)
+                if (selectedPart && part.name === selectedPart.name && newSize) {
+                    sizeMiB = newSize
+                }
+                const percent = Math.floor(sizeMiB / maxSize * 100)
+                if (percent < 1) Hasta100--;
+
+            })
+            //let partOcupadaSize=0;
+            let ocupadoAntes = 0;
+            newParts[disk.name]?.forEach((p, i) => {
+                const base = getLastPartNumber(disk)
+                const num = base + i + 1;
+                const sep = getSeparator(disk.name)
+                let name = disk.name + sep + num;
+                let auxSize = document.getElementById(`size_${name}`).value.trim();
+                let size = parseInt(auxSize) || 0;
+                if (auxSize === "100%") {
+                    size = bytesToMiB(selectedPart.size) - newSize - ocupadoAntes;
+                }
+                ocupadoAntes += size;
+                if (!size) return
+                const percent = Math.floor(size / maxSize * 100)
+                if (percent < 1) Hasta100--;
+            })
+
+            disk.children?.forEach(part => {
+
+                let sizeMiB = bytesToMiB(part.size)
+
+                if (selectedPart && part.name === selectedPart.name && newSize) {
+                    //alert('siii')
+                    //partOcupadaSize = sizeMiB;
+                    sizeMiB = newSize
+                    let percent = Math.floor(sizeMiB / maxSize * Hasta100);
+                    if (percent < 1) percent = 1
+                    drawRect(svg, xPercent, percent, getFsColor(part.fstype), "#222")
+                    xPercent += percent
+                    const np = newParts[disk.name] || [];
+                    let sizeCreadas = 0;
+                    const base = getLastPartNumber(disk)
+                    let num = 0;
+                    const sep = getSeparator(disk.name)
+                    //let name = disk.path + sep + num;
+                    np.forEach((p, i) => {
+                        num = base + i + 1;
+                        let name = disk.name + sep + num;
+                        
+                        let auxSize = document.getElementById(`size_${name}`).value.trim();
+                        let size = parseInt(auxSize) || 0;
+                        if (auxSize === "100%") {
+                            size = bytesToMiB(part.size) - newSize - ocupado;
+                        }
+                        
+                        sizeCreadas += size;
+                        if (!size) return
+                        let percent = Math.floor(size / maxSize * Hasta100);
+                        if (percent < 1) percent = 1;
+                        ocupado += size;
+                        const fs = p.element.querySelector("select").value
+                        drawRect(svg, xPercent, percent, getFsColor(fs), "red", 6)
+                        xPercent += percent
+                    })
+
+                    freed = bytesToMiB(part.size) - newSize - ocupado;
+
+                    if (freed > 0) {
+                        //const freedPercent = (freed / totalMiB) * 100
+                        let freedPercent = Math.floor(freed / maxSize * Hasta100);
+                        if (freedPercent < 1) freedPercent = 1
+                        drawRect(svg, xPercent, freedPercent, "#ffffff", "black"/*"#999"*/, 6)
+                        xPercent += freedPercent
+                    }
+
+                } else {
+                    //let percent = (sizeMiB / totalMiB) * 100
+                    let percent = Math.floor(sizeMiB / maxSize * Hasta100);
+                    if (percent < 1) percent = 1
+
+                    drawRect(svg, xPercent, percent, getFsColor(part.fstype), "#222")
+                    xPercent += percent
+                    //let freed = 0;
+                    //let ocupado = 0;
+                }
+                let infoElement = document.getElementById(`info_${part.name}`);
+                if (infoElement) {
+                    //alert("ocupado: " + ocupado + " freed: " + freed+ " MiB particion: " + bytesToMiB(part.size) + " newSize: " + newSize)
+                    //infoElement.innerText = `Libre: ${freed} MiB`;
+                    if (freed < 0) {
+                        infoElement.textContent = "⚠ Excede tamaño"
+                        infoElement.style.color = "red"
+                    } else {
+                        infoElement.textContent = `Libre: ${freed} MiB`
+                        infoElement.style.color = "green"
+                    }
+                }
+
+               
+            })
+
+            
+        }
+
+        // ---------------- AÑADIR NUEVA ----------------
+
+        function addPartition(disk, diskDiv) {
+            if (!todosSelected[disk.name]) {
+                alert("Selecciona la partición a redimensionar antes de añadir una nueva partición")
+                return
+            } else {
+                const selectedPart = todosSelected[disk.name].part;
+                //const radio = document.getElementById(`radio_${selectedPart.name}`);
+                //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                if (!document.getElementById(`input_${selectedPart.name}`).value.trim()) {
+                    alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
+                    return
+                }
+                let liberado = bytesToMiB(selectedPart.size) - parseInt(document.getElementById(`input_${selectedPart.name}`).value.trim());
+                if (newParts[disk.name]) {
+                    let tamañoTotal = 0;
+                    let seguimos = true;
+                    newParts[disk.name].forEach(p => {
+                        const sizeInput = document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim();
+                        if (sizeInput === '100%') {
+                            alert("No se puede añadir una nueva partición si se ha ocupado el 100% del espacio con las presentes.")
+                            seguimos = false;
+                            return
+                        }
+                        tamañoTotal += parseInt(sizeInput);
+
+                    })
+                    if (!seguimos) return;
+                    if (tamañoTotal >= liberado) {
+                        alert("La suma de los tamaños de las nuevas particiones ya ocupa todo el espacio disponible")
+                        return
+                    }
+                }
+            }
+
+            if (!newParts[disk.name]) newParts[disk.name] = []
+
+            const base = getLastPartNumber(disk)
+            const num = base + newParts[disk.name].length + 1
+            const sep = getSeparator(disk.name);
+            const prev = num - 1;
+            if (prev > base) document.getElementById('remove_' + disk.name + sep + prev).style.visibility = "hidden"; //si se añade una nueva partición sin haber puesto tamaño a la anterior se borra la anterior para evitar confusiones, ya que no se puede añadir una nueva partición si la anterior no tiene tamaño
+            const name = disk.path + sep + num;
+            const idName = disk.name + sep + num;
+            const div = document.createElement("div")
+            div.className = "new-part"
+
+            div.innerHTML = `
+    ${name}
+    <select id="fs_${idName}">
+      <option>ext4</option>
+      <option>ntfs</option>
+      <option>vfat</option>
+      <option>swap</option>
+    </select>
+    Tamaño MiB:
+    <!--<input type="number" min="1" id="size_${idName}" style="width:80px">-->
+    <input type="text" id="size_${idName}" style="width:80px" value="100%">
+    Label:
+    <input type="text" id="label_${idName}" style="width:100px">
+    <button type="button" id="remove_${idName}">❌</button>
+  `
+
+            const removeBtn = div.querySelector("button")
+            removeBtn.onclick = () => {
+                
+                const selectedPart = todosSelected[disk.name].part;
+                
+
+                if (!document.getElementById(`input_${selectedPart.name}`).value.trim()) {
+                    alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
+                    return
+                }
+                if (prev > base) document.getElementById(`remove_${disk.name + sep + prev}`).style.visibility = "visible"; //al eliminar la partición se vuelve a mostrar la anterior
+                div.remove()
+                //alert(JSON.stringify(newParts[disk.name]))
+                //newParts[disk.name] = newParts[disk.name].filter(x => x.element !== div)
+                newParts[disk.name].pop()//Elimina la última partición añadida, que es la que se borra al hacer click en el botón de eliminar, ya que no se puede eliminar una partición que no sea la última añadida
+                //alert(JSON.stringify(newParts[disk.name]))
+                redrawDisk(disk)
+            }
+
+            //div.querySelector("input[type=number]").addEventListener("input", () => redrawDisk(disk))
+            //alert(`size_${name}`)
+            let entradas = div.querySelectorAll("input[type=text]")
+            entradas.forEach(ent => {
+                if (ent.id === `size_${idName}`) ent.addEventListener("input", () => redrawDisk(disk))
+            })
+            //.addEventListener("input", () => redrawDisk(disk))
+            //div.getElementById(`size_${name}`).addEventListener("input", () => redrawDisk(disk))
+            div.querySelector("select").addEventListener("change", () => redrawDisk(disk))
+
+            diskDiv.appendChild(div)
+            //alert(div)
+            newParts[disk.name].push({ num, element: div })
+            //alert('se añaden: ' + JSON.stringify(newParts[disk.name]))
+
+            redrawDisk(disk)
+        }
+
+        // ---------------- GENERAR SCRIPT ----------------
+        let cabeceraScript = `#!/bin/bash
+set -euo pipefail`;
+        let ejecucionScript = `# =============================
+# EJECUCIÓN
+# =============================
+
+require_root
+confirm_destruction`;
+        let scriptFunciones = `# =============================
+# FUNCIONES
+# =============================
+
+require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "ERROR: Debe ejecutarse como root"
+    exit 1
+  fi
+}
+
+check_disk() {
+  [[ -b "$1" ]] || { echo "ERROR: Disco $1 no existe"; exit 1; }
+}
+
+check_partition_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        echo "ERROR: La partición $partition YA existe."
+        exit 1
+    fi
+
+    return 0
+}
+
+unmount_if_mounted() {
+    local partition="$1"
+
+    if findmnt -rn -S "$partition" > /dev/null 2>&1; then
+        echo "La partición $partition está montada. Desmontando..."
+        if umount "$partition"; then
+            echo "Desmontada correctamente."
+            return 0
+        else
+            echo "Error al desmontar $partition."
+            exit 1
+        fi
+    else
+        echo "La partición $partition no está montada."
+        return 0
+    fi
+}
+
+check_partition_NO_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        return 0
+    fi
+    
+    echo "ERROR: La partición $partition NO existe."
+    exit 1
+}
 `;
-                                };
-                                if (sumamos) hastaReducir += MBs;
+        let scriptConfirmar = {
+            cabecera: `confirm_destruction() {
+  echo "=============================================="
+  echo "⚠  ADVERTENCIA: Operación potencialmente destructiva"
+  echo "Se modificarán los discos:"`, cuerpo: ``, final: `  echo "=============================================="
+  read -rp "Escriba 'CONFIRMAR' para continuar: " confirm
+
+  if [[ "$confirm" != "CONFIRMAR" ]]; then
+    echo "Abortado."
+    exit 1
+  fi
+}
+`}
+        function generateScript() {
+            let estadoValores = {}
+            //todosSelected[disk.name] = {disk, part, input}
+            let script = ``;
+            //alert("Generando script\n" + JSON.stringify(todosSelected))
+            for (let key in todosSelected) {
+                //alert("Seleccionado en " + key + ": " + JSON.stringify(todosSelected[key]))
+                selected = todosSelected[key];
+                if (!selected) { alert("Seleccione partición"); return }
+
+                let disk = selected.disk
+                let part = selected.part
+                //alert("Partición seleccionada comienza en: " + (part.start * part['log-sec']) + ' y acaba en: ' + ((part.start * part['log-sec']) + (+part.size - 1)))
+                let PartIni = part.start * part['log-sec'];
+                let PartFin = (part.start * part['log-sec']) + (+part.size - 1);
+                let newSize = parseInt(selected.input.value)
+                estadoValores[disk.name] = { partName: part.name, newSize: selected.input.value, nuevas: [] };
+                //alert('qqqq'+selected.input.id + " = " + selected.input.value+'--'+document.getElementById('radio_'+part.name).checked);
+                if (!newSize) { alert("Indique nuevo tamaño"); return }
+
+                let originalMiB = bytesToMiB(part.size)
+                let freed = originalMiB - newSize
+                if (freed <= 0) { alert("No libera espacio"); return }
+
+                let numMatch = part.name.match(/(\d+)$/)
+                if (!numMatch) { alert("Error número partición"); return }
+                let partNumber = numMatch[1]
+                //alert(JSON.stringify(newParts[disk.name]))
+                //alert(part.name + '++' + partNumber + '++' + newSize + '++' + freed + '--' + disk.name + '--' + getSeparator(disk.name))
+                let toCreate = newParts[disk.name] || []
+                let requested = 0
+                toCreate.forEach((p, i) => {
+
+                    //if (i !== toCreate.length - 1)
+                    //alert(disk.path + '..' + `size_${disk.name + getSeparator(disk.name) + p.num}`)
+                    requested += parseInt(document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim())
+                    //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
+                })
+
+                if (requested > freed) {
+                    alert("Excede espacio disponible")
+                    return
+                }
+                let newSizeMiB = bytesToMiB(part.size) - freed;
+                let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000);
+                let newSizeEnBytes = part.size - freed * 1024 * 1024;
+                let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeEnBytes} --force ${part.path}` : '';
+                //let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                //Para redimesion Ext4 aunque se pone en MiB se indica con la sigla M.
+                let textoExt4 = part.fstype === 'ext4' ? `resize2fs ${part.path} ${newSizeMiB}M` : '';
+                scriptConfirmar.cuerpo += `\n  echo "   - ${disk.path}"`;
+                ejecucionScript += `\ncheck_disk "${disk.path}"
+check_partition_NO_exists "${disk.path}${getSeparator(disk.name)}${partNumber}"
+unmount_if_mounted "${disk.path}${getSeparator(disk.name)}${partNumber}"
+`;
+                script += `
+DISK="${disk.path}"
+echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"
+# 2️⃣ Verificar filesystem si es ext4${part.fstype === 'ext4' ? `\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}` : ''}
+# 3️⃣ Reducir el filesystem
+${part.fstype === 'ntfs' ? textoNTFS : ''}${part.fstype === 'ext4' ? textoExt4 : ''}
+parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
+partprobe "$DISK"
+sleep 2
+# 6️⃣ Verificación final${part.fstype === 'ext4' ? `\n#e2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}` : ''}
+
+`
+                //sgdisk -n 14:204800:409599 "$DISK" los numeros son en sectores, no en MiB, por eso se multiplica por 1024*1024 y se resta a PartFin para que la nueva partición quede al final del espacio liberado
+                let newIni = PartFin - (freed * 1024 * 1024) + 1;
+                toCreate.forEach((p, i) => {
+                    const sectorIni = newIni / part['log-sec'];
+                    const size = parseInt(document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim());
+                    const label = document.getElementById(`label_${disk.name + getSeparator(disk.name) + p.num}`).value.trim() //
+                    let sectorFin = sectorIni + (size * 1024 * 1024 / part['log-sec']) - 1;
+                    newIni = newIni + (size * 1024 * 1024);
+                    const fs = p.element.querySelector("select").value
+                    estadoValores[disk.name].nuevas.push({ name: (disk.name + getSeparator(disk.name) + p.num), size: document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim(), label: label, fs: fs });
+                    //alert(`Creando partición ${p.num} desde sector ${sectorIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
+                    let textoFs = '';
+                    if (fs === 'ntfs' || fs === 'vfat') {
+                        textoFs = `\nsgdisk -t ${p.num}:0700 "$DISK"`
+                        if (label === 'EFI' && fs === 'vfat') textoFs = `\nsgdisk -t ${p.num}:EF00 "$DISK"`
+                    }
+
+                    if (i === toCreate.length - 1) {
+                        sectorFin = (PartFin + 1) / part['log-sec'] - 1;
+                        script += `\necho "Creando partición final"
+sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
+`
+                    } else {
+                        script += `\necho "Creando partición ${p.num}"
+sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
+`
+                    }
+                    ejecucionScript += `\ncheck_partition_exists  "${disk.path}${getSeparator(disk.name)}${p.num}"`
+                    script += `
+partprobe "$DISK"
+sleep 1
+DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
+`                   ;
+                    textoFs = '';
+                    if (label) {
+                        if (fs === 'vfat') textoFs = `-n ${label}`;
+                        if (fs === 'ntfs') textoFs = `--label ${label}`;
+                    }
+
+                    if (fs === "ext4") script += `mkfs.ext4 -F "$DEV"\n`
+                    if (fs === "ntfs") script += `mkfs.ntfs --fast ${textoFs} "$DEV"\n`
+                    if (fs === "vfat") script += `mkfs.vfat -F32 ${textoFs} "$DEV"\n`
+                    if (fs === "swap") script += `mkswap "$DEV"\n`
+
+                    if (label) {
+                        if (fs === "ext4") script += `e2label "$DEV" "${label}"\n`
+                        //if (fs === "ntfs") script += `ntfslabel "$DEV" "${label}"\n`
+                        //if (fs === "vfat") script += `fatlabel "$DEV" "${label}"\n`
+                        if (fs === "swap") script += `swaplabel -L "${label}" "$DEV"\n`
+                    }
+                })
+            }
+            script += `\necho "FINALIZADO"\n`
+            script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
+            download(script, "particionador.sh")
+            //guardar estado para clonar
+            download(JSON.stringify({ newParts: newParts, data, estadoValores }), 'Estado.json')
+            //para clonar
+            originalState = JSON.parse(JSON.stringify(data))
+            alert("Estado base guardado. Ahora puedes aplicar el script y cargar el nuevo JSON para modo CLON.")
+            //fin para clonar
+        }
+
+        function download(text, name) {
+            const blob = new Blob([text], { type: "text/plain" })
+            const a = document.createElement("a")
+            a.href = URL.createObjectURL(blob)
+            a.download = name
+            a.click()
+        }
+
+        // ---------------- GENERAR SCRIPT CLON ----------------        
+        function generateCloneScriptUNO() {
+
+            if (!originalState) {
+                alert("Primero debes generar el script inicial.")
+                return
+            }
+
+            const input = document.createElement("input")
+            input.type = "file"
+
+            input.onchange = e => {
+
+                const reader = new FileReader()
+                reader.onload = evt => {
+                    let cabeceraScript = `#!/bin/bash
+set -euo pipefail`;
+                    let ejecucionScript = `# =============================
+# EJECUCIÓN
+# =============================
+
+require_root
+confirm_destruction`;
+                    let scriptFunciones = `# =============================
+# FUNCIONES
+# =============================
+
+require_root() {
+  if [[ $EUID -ne 0 ]]; then
+    echo "ERROR: Debe ejecutarse como root"
+    exit 1
+  fi
+}
+
+check_disk() {
+  [[ -b "$1" ]] || { echo "ERROR: Disco $1 no existe"; exit 1; }
+}
+
+check_partition_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        echo "ERROR: La partición $partition YA existe."
+        exit 1
+    fi
+
+    return 0
+}
+
+unmount_if_mounted() {
+    local partition="$1"
+
+    if findmnt -rn -S "$partition" > /dev/null 2>&1; then
+        echo "La partición $partition está montada. Desmontando..."
+        if umount "$partition"; then
+            echo "Desmontada correctamente."
+            return 0
+        else
+            echo "Error al desmontar $partition."
+            exit 1
+        fi
+    else
+        echo "La partición $partition no está montada."
+        return 0
+    fi
+}
+
+check_partition_NO_exists() {
+    local partition="$1"
+
+    if [[ -b "$partition" ]]; then
+        return 0
+    fi
+    
+    echo "ERROR: La partición $partition NO existe."
+    exit 1
+}
+
+check_uuid_conflict() {
+  local uuid="$1"
+  if blkid -U "$uuid" &>/dev/null; then
+    echo "ERROR: Conflicto UUID $uuid"
+    exit 1
+  fi
+}
+
+check_partuuid_conflict() {
+  local partuuid="$1"
+  if blkid -t PARTUUID="$partuuid" &>/dev/null; then
+    echo "ERROR: Conflicto PARTUUID $partuuid"
+    exit 1
+  fi
+}`;
+                    let scriptConfirmar = {
+                        cabecera: `confirm_destruction() {
+  echo "=============================================="
+  echo "⚠  ADVERTENCIA: Operación potencialmente destructiva"
+  echo "Se modificarán los discos:"`, cuerpo: ``, final: `  echo "=============================================="
+  read -rp "Escriba 'CONFIRMAR' para continuar: " confirm
+
+  if [[ "$confirm" != "CONFIRMAR" ]]; then
+    echo "Abortado."
+    exit 1
+  fi
+}
+`}
+                    //todosSelected[disk.name] = {disk, part, input}
+                    let script = ``;
+                    for (let key in todosSelected) {
+                        //alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
+                        selected = todosSelected[key];
+                        if (!selected) { alert("Seleccione partición"); return }
+                        ///PARTE DE PRIMERO
+                        let disk = selected.disk
+                        let part = selected.part
+                        let PartIni = part.start * part['log-sec'];
+                        let PartFin = (part.start * part['log-sec']) + (+part.size - 1);
+                        let newSize = parseInt(selected.input.value)
+                        let originalMiB = bytesToMiB(part.size)
+                        let freed = originalMiB - newSize
+                        let numMatch = part.name.match(/(\d+)$/)
+                        if (!numMatch) { alert("Error número partición"); return }
+                        let partNumber = numMatch[1]
+                        toCreate = newParts[disk.name] || []
+                        let requested = 0
+                        toCreate.forEach((p, i) => {
+                            if (i !== toCreate.length - 1)
+                                requested += parseInt(document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim())
+                            //requested += parseInt(p.element.querySelector("input[type=number]").value || 0)
+                        })
+                        let newSizeMB = Math.floor((part.size - freed * 1024 * 1024) / 1000000);
+                        let textoExt4 = part.fstype === 'ext4' ? `resize2fs ${part.path} ${newSize}M` : '';
+                        //let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${newSizeMB}M --force ${part.path}` : '';
+                        let textoNTFS = part.fstype === 'ntfs' ? `ntfsresize --size ${part.size - freed * 1024 * 1024} --force ${part.path}` : '';
+                        scriptConfirmar.cuerpo += `\n  echo "   - ${disk.path}"`;
+                        ejecucionScript += `\ncheck_disk "${disk.path}"
+check_partition_NO_exists "${disk.path}${getSeparator(disk.name)}${partNumber}"
+unmount_if_mounted "${disk.path}${getSeparator(disk.name)}${partNumber}"`;
+                        script += `#echo "Modo CLON OEM"
+
+DISK="${disk.path}"
+${part.fstype === 'ext4' ? `# 2️⃣ Verificar filesystem si es ext4\ne2fsck -f ${disk.path}${getSeparator(disk.name)}${partNumber}` : ''}
+echo "Redimensionando ${disk.path}${getSeparator(disk.name)}${partNumber}"${part.fstype === 'ntfs' ? '\n' + textoNTFS : ''}${part.fstype === 'ext4' ? '\n' + textoExt4 : ''}
+parted --fix "$DISK" unit B resizepart ${partNumber} ${PartFin - (freed * 1024 * 1024)}
+partprobe "$DISK"
+sleep 2
+
+`
+                    }
+
+                    ///FINAL DE PARTE DE PRIMERO
+
+                    clonedState = JSON.parse(evt.target.result)
+
+                    //let script = `#!/bin/bash
+                    //set -euo pipefail
+
+                    script += `#echo "Modo CLON OEM"
+`
+
+                    originalState.blockdevices.forEach(origDisk => {
+
+                        if (origDisk.type !== "disk") return
+
+                        const newDisk = clonedState.blockdevices.find(d => d.name === origDisk.name)
+                        if (!newDisk) return
+
+                        const origParts = origDisk.children?.map(p => p.name) || []
+                        const newParts = newDisk.children || []
+
+                        newParts.forEach(part => {
+
+                            if (!origParts.includes(part.name)) {
+
+                                const numMatch = part.name.match(/(\d+)$/)
+                                if (!numMatch) return
+
+                                const num = numMatch[1]
+                                const sep = getSeparator(newDisk.name)
+
+                                script += `
+if blkid | grep -q "${part.uuid}"; then
+  echo "ERROR: Conflicto UUID ${part.uuid}"
+  exit 1
+fi
+`
+                                let sectorIni = part.start;
+                                let sectorFin = part.start + (part.size / part['log-sec']) - 1
+                                let textoFs = '';
+                                if (part.fstype === 'ntfs' || part.fstype === 'vfat') {
+                                    textoFs = `\nsgdisk -t ${num}:0700 ${newDisk.path}`
+                                    if (part.label === 'EFI' && part.fstype === 'vfat') textoFs = `\nsgdisk -t ${num}:EF00 ${newDisk.path}`
+                                }
+                                ejecucionScript += `\n
+check_partition_exists "/dev/${part.name}"
+check_uuid_conflict "${part.uuid}"
+check_partuuid_conflict "${part.partuuid}"
+`
+                                script += `
+echo "Creando partición ${part.name}"
+sgdisk -n ${num}:${sectorIni}:${sectorFin} ${newDisk.path}${textoFs}
+sgdisk -u ${num}:${part.partuuid} ${newDisk.path}
+partprobe ${newDisk.path}
+sleep 1
+`
+
+                                if (part.fstype === "ext4")
+                                    script += `mkfs.ext4 -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+
+                                //iba lo de ntfs antes de la etiqueta en el mkfs, pero al poner la etiqueta ahí no se aplicaba, así que se pone aparte y con --fast para que sea más rápido aunque no tan óptimo
+
+                                if (part.fstype === "vfat") {
+                                    let labelSinGion = part.uuid.replace(/-/g, '');
+                                    if (part.label) textoFs = `-n ${part.label}`;
+                                    else textoFs = '';
+                                    script += `mkfs.vfat -F32 ${textoFs} -i ${labelSinGion} ${newDisk.path}${sep}${num}\n`
+                                    //script += `mkfs.vfat ${newDisk.path}${sep}${num}\nfatlabel ${newDisk.path}${sep}${num} "${part.label || ""}"\n`
+                                    /*if (part.label) {
+                                        script += `fatlabel ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                    }*/
+                                }
+                                if (part.fstype === "swap") {
+                                    if (part.label) {
+                                        script += `swaplabel -L "${part.label}" -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    } else {
+                                        script += `mkswap -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    }
+                                }
+                                if (part.label && part.fstype !== "vfat") {
+                                    if (part.fstype === "ext4")
+                                        script += `e2label ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                    if (part.fstype === "ntfs")
+                                        //script += `ntfslabel ${newDisk.path}${sep}${num} "${part.label}"\n`
+                                        script += `mkfs.ntfs --fast --label "${part.label}" ${newDisk.path}${sep}${num}\n`
+                                }
+                                if (part.fstype === "ntfs")
+                                    //script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
+                                    script += `ntfslabel --new-serial=${part.uuid} ${newDisk.path}${sep}${num}\n`
 
 
                             }
-                        }
+                        })
+                    })
 
-                    } else { //nulo o indefinido
-                        break;
-                    }
-
+                    script += `echo "CLON FINALIZADO"\n`
+                    script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
+                    download(script, "particionadorUUIDs_clone.sh")
                 }
-                scripts[i - 1] += cola + '\necho "Proceso completado con éxito en el disco sd' + letra + '."\n############################';
-                mensajes += `El tamaño total de las nuevas particiones y la reducida  y las viejas en sd${letra} es al menos: ${tDiscSize} MB\n`;
-                textoScripts += `### CONFIGURACIÓN ###
-DISK${i}=${disk}
-WIN_PART${i}=${win_part}\n\n${uuid_xxx}\n\n`+ `### El disco sd${letra} debe tener mas de ${tDiscSize}MiB. ###\n` + scripts[i - 1] + '\n\n';
+
+                reader.readAsText(e.target.files[0])
             }
-            //if (partRedimensionar < 1) errores += `Se pide redimensionar ${partRedimensionar} particiones de Windows, solo está pensado para redimensionar 1.\n`;
-            if (partLinusSwap > 1) errores += `Se pide crear ${partLinusSwap} particiones de intercambio, puede haber 0 o 1.\n`;
-            if (nSRP < 1 || nSRP > 1) errores += `Hay ${nSRP} particiones SRP, DEBER HABER 1.\n`;
-            if (nSRPBACKUP > 1) errores += `Hay ${nSRPBACKUP} particiones SRPBACKUP, DEBER HABER 1 (ó ninguna).\n`;
-            if (nSRPBACKUP ===0) mensajes='¡¡No se ha previsto partición para SRPBACKUP, se asume que los backups deberán guardar en SRP!!\n'+mensajes;
-            if (errores === '') {
-                downloadTextFile('particionador.sh', textoScripts);
-                alert('No se han detectado errores en la generación de scripts, se ha descargado el archivo particionador.sh,\n' +
-                    'no obstante el al ejecutarlo se reparticionará el disco(s) y si no fuera correcto podrían perderse los datos.\n' +
-                    'conviene que se disponga de copias de seguridad antes de ejecutarlo y ver que funciona correctamente.\n\n'+mensajes);
-            } else alert(errores)
-            alert(mensajes + '\nSRP: ' + nSRP + '\nSRPBACKUP: ' + nSRPBACKUP);
-        }
-        function downloadTextFile(filename, text) {
-            // Crear un Blob con el contenido de texto
-            const blob = new Blob([text], { type: 'text/plain' });
 
-            // Crear un enlace temporal
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = filename;
-
-            // Simular un clic en el enlace para iniciar la descarga
-            document.body.appendChild(a);
-            a.click();
-
-            // Limpiar el DOM
-            document.body.removeChild(a);
-            URL.revokeObjectURL(a.href);
+            input.click()
         }
-        function obtenerSeleccion(nombre) {
-            //alert(nombre);
-            // Obtener el radio seleccionado
-            try {
-                const seleccion = document.querySelector('input[name="' + nombre + '"]:checked');
-                return seleccion.value
-            } catch (e) {
-                //alert('No se ha seleccionado ninguna partición a redimensionar en:'+nombre);
-                return -1;
-            }
-            // Verifcicar si se seleccionó algo
-            /*if (seleccion) {
-                document.getElementById("resultado").textContent = "Seleccionaste: " + seleccion.value;
-            } else {
-                document.getElementById("resultado").textContent = "No seleccionaste ninguna opción";
-            }*/
-        }
+
+
+        
+
+
     </script>
 </body>
 
