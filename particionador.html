@@ -208,6 +208,30 @@
             reader.readAsText(e.target.files[0])
         })
 
+        //para dejar de usar un disco que se seleccionó por error
+        const removeDisk = (name) => {
+            if (todosSelected[name]) {
+                if (!confirm("¿Desea dejar de usar el disco " + name + "? Se perderán los cambios planificados en la partición " + todosSelected[name].part.name + ".")) {
+                    return;
+                }
+                const input = document.getElementById(`input_${todosSelected[name].part.name}`);
+                input.value = "";
+                const radio = document.getElementById(`radio_${todosSelected[name].part.name}`);
+                //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                radio.checked = false;
+                //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                document.querySelectorAll(".partition-row span").forEach(s => {
+                            if (s.getAttribute("disco") === name)
+                                s.style.display = "none"
+                        })
+                delete todosSelected[name];
+                if (newParts[name]) newParts[name].forEach(p => p.element.remove())
+                delete newParts[name];
+                const disk = data.blockdevices.find(d => d.name === name);
+                redrawDisk(disk)
+            }
+        }
+
         // ---------------- RENDER ----------------
         let maxSize = 0;
         function render() {
@@ -240,6 +264,7 @@
           Nuevo tamaño MiB:
           <input id="input_${part.name}" type="number" min="1" style="width:80px">
           <span class="free-info" id="info_${part.name}"></span>
+          No usar este disco: <button type="button" id="removeDisck_${part.name}" onclick="removeDisk('${disk.name}')">❌</button>
         </span>
       `
 
@@ -763,12 +788,12 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
                 alert("Primero debes generar el script inicial.")
                 return
             }
-
+            //alert("Selecciona el ....json obtenido con la información de los discos tras haber aplicado el script particionador.sh y de nuevo la orden lsblk -J ... para generar el script de clonación.")
             const input = document.createElement("input")
             input.type = "file"
 
             input.onchange = e => {
-
+                
                 const reader = new FileReader()
                 reader.onload = evt => {
                     let cabeceraScript = `#!/bin/bash
@@ -1007,8 +1032,11 @@ sleep 1
 
                 reader.readAsText(e.target.files[0])
             }
-
-            input.click()
+            //const input = document.createElement("input")
+            //input.type = "file"
+            if(confirm("Selecciona el JSON obtenido con la información de los discos tras haber aplicado el script particionador.sh y de nuevo la orden lsblk -J ... para generar el script de clonación.")){
+                input.click()
+            }
         }
 
 
