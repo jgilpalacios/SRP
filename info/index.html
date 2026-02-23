@@ -1004,8 +1004,8 @@
                             <p style="text-align: justify;">Otra opción que evitaría lidiar problemas con las licencias
                                 del windows preinstalado, es no eliminarlo, sino mantenerlo y particionar los equipos de
                                 forma idéntica uno a uno. El problema es que la herramienta de particionado que se
-                                propone para instalar SRP, gparted es una aplicación con un entorno gráfico interactivo y
-                                habría que ser cuidadoso para que los redimensionados y tamaños de las particiones que
+                                propone para instalar SRP, gparted es una aplicación con un entorno gráfico interactivo
+                                y habría que ser cuidadoso para que los redimensionados y tamaños de las particiones que
                                 se fueran creado fueran idénticos en todos los equipos, lo cual tiene su dificultad y
                                 sería propenso a errores. En este apartado se propone automatizar el proceso de creación
                                 del particionado mediante un script: <strong>particionador.sh</strong> (y si se quiere
@@ -1013,10 +1013,10 @@
                                 equipo <strong>particionadorUUIDs_clone.sh</strong>), que junto con el
                                 srp.zip permitirá generar de forma automatizada las particiones y configurar el SRP de
                                 forma que queden idénticos todos los equipos (si bien, con particionador.sh, las UUID de
-                                las particiones
-                                equivalentes en los distintos equipos serán diferentes, con <strong>particionadorUUIDs_clone.sh
-                                sí serían las mismas</strong>), sin que se haya modificado el
-                                sistema windows de cada equipo, y por tanto sin que haya que revisar sus licencias.</p>
+                                las particiones equivalentes en los distintos equipos serán diferentes, con
+                                <strong>particionadorUUIDs_clone.sh sí serían las mismas</strong>), sin que se haya modificado el sistema windows de
+                                cada equipo, y por tanto sin que haya que revisar sus licencias.
+                            </p>
                             <p style="text-align: justify;">PROCEDIMIENTO</p>
                             <ol>
                                 <li style="text-align: justify;">Quitar bitlockquer en el primer equipo.</li>
@@ -1059,7 +1059,7 @@
                                     carga la información de los discos y nos configura el redimensionado y nuevas
                                     particiones en la aplicación web.
                                     Todo el proceso aproximado de redimensionado y creación de las nuevas particiones es
-                                    similar al de la versión antigua que se describe en el video siguiente:
+                                    similar al de la versión antigua que se describe en el video siguiente:<br>
                                     <iframe width="420" height="315" style="border: 0; overflow: hidden;"
                                         src="https://mediateca.educa.madrid.org/video/5j4854831vaxslx6/fs"
                                         frameborder="0" scrolling="no" allowfullscreen="allowfullscreen"></iframe>
@@ -1117,7 +1117,8 @@
                                 <li style="text-align: justify;">Si en el paso 6 todo funciono correctamente se pasaría,
                                     en cada uno del resto de los equipos, a aplicar el paso 1 (desactivar bitlocker),
                                     arrancar con el pemdrive/CD de SystemRescueCD para llevar a cabo los pasos 5 y 6
-                                    usando el <b>particionadorUUIDs_clone.sh</b> (particionador.sh), y <b>srp.zip</b> obtenidos (y
+                                    usando el <b>particionadorUUIDs_clone.sh</b> (particionador.sh), y <b>srp.zip</b>
+                                    obtenidos (y
                                     guardados en un medio extraíble) con la garantía de que han funcionado correctamente
                                     en el equipo primero. Tras todo el proceso tendríamos todos los equipos con SRP
                                     instalado y el Windows original del equipo.</li>
