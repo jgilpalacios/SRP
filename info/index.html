@@ -1004,7 +1004,7 @@
                             <p style="text-align: justify;">Otra opción que evitaría lidiar problemas con las licencias
                                 del windows preinstalado, es no eliminarlo, sino mantenerlo y particionar los equipos de
                                 forma idéntica uno a uno. El problema es que la herramienta de particionado que se
-                                prpone para instalar SRP, gparted es una aplicación con un entorno gráfico interactivo y
+                                propone para instalar SRP, gparted es una aplicación con un entorno gráfico interactivo y
                                 habría que ser cuidadoso para que los redimensionados y tamaños de las particiones que
                                 se fueran creado fueran idénticos en todos los equipos, lo cual tiene su dificultad y
                                 sería propenso a errores. En este apartado se propone automatizar el proceso de creación
@@ -1014,8 +1014,8 @@
                                 srp.zip permitirá generar de forma automatizada las particiones y configurar el SRP de
                                 forma que queden idénticos todos los equipos (si bien, con particionador.sh, las UUID de
                                 las particiones
-                                equvalentes en los distintos equipos serán diferentes, con particionadorUUIDs_clone.sh
-                                sí serían las mismas), sin que se haya modificado el
+                                equivalentes en los distintos equipos serán diferentes, con <strong>particionadorUUIDs_clone.sh
+                                sí serían las mismas</strong>), sin que se haya modificado el
                                 sistema windows de cada equipo, y por tanto sin que haya que revisar sus licencias.</p>
                             <p style="text-align: justify;">PROCEDIMIENTO</p>
                             <ol>
@@ -1075,7 +1075,7 @@
                                             > bloques.json</b></p><br>
                                     y cargar la información de las nuevas particiones con el botón correspondiente de la
                                     herramienta web ya configurada en el paso anterior que nos pedirá el nuevo
-                                    bloques.json y generará el archivo particionadorUUIDs_clone.sh. (se se hubiera
+                                    bloques.json y generará el archivo particionadorUUIDs_clone.sh. (si se hubiera
                                     reiniciado el navegador se habría perdido la configuración, pero se puede volver a
                                     reconfigurar usando el archivo Estado.json que se descarga a la vez que
                                     particionador.sh en el paso anterior, Estado.json se puede cargar con el botón para
@@ -1114,7 +1114,7 @@
                                     la partición de windows no quedara correcta tras este paso, el proceso no sería
                                     válido y para recuperar el estado inicial se debería utilizar clonezilla y la imagen
                                     que se creo en el paso 1.</li>
-                                <li style="text-align: justify;">Si en el paso 5 todo funciono correctamente se pasaría,
+                                <li style="text-align: justify;">Si en el paso 6 todo funciono correctamente se pasaría,
                                     en cada uno del resto de los equipos, a aplicar el paso 1 (desactivar bitlocker),
                                     arrancar con el pemdrive/CD de SystemRescueCD para llevar a cabo los pasos 5 y 6
                                     usando el <b>particionadorUUIDs_clone.sh</b> (particionador.sh), y <b>srp.zip</b> obtenidos (y
