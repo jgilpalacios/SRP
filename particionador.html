@@ -73,12 +73,13 @@
     Botón para cargar el bloques.json nuevo y <button onclick="generateCloneScriptUNO()">Generar script particionador con las UUIDs iguales del primer equipo</button>
     </p>
     <p style="color:rgb(79, 4, 4); text-align: justify;" >
-        Al descargar <b>particionador.sh</b> se descarga a la vez <b>Estado.json</b> un archivo con la información de bloques.json y los datos que introdujimos para configurar particiones a redimensionar y nuevas a crear. Para <u>generar particionadorUUIDs_clone.sh se precisa que el navegador esté configurado</u> y si por error recargamos la página antes de leer el nuevo archivo bloques.json se perdería esa información. Para evitar que se tuviera que rehacer manualmente <b>se puede recuperar el navegador completamente configurado cargando <u>Estado.json</u></b> con el siguiente botón.<br>
+        Al descargar <b>particionador.sh</b> se descarga a la vez <b>Estado.json</b> un archivo con la información de bloques.json y los datos que introdujimos para configurar particiones a redimensionar y nuevas a crear. Para <u>generar particionadorUUIDs_clone.sh se precisa que el navegador esté configurado</u> y si por error recargamos la página antes de leer el nuevo archivo bloques.json se perdería esa información. Para evitar que se tuviera que rehacer manualmente <b>se puede recuperar el navegador <u>completamente configurado</u> cargando <u>Estado.json</u></b> con el siguiente botón.<br>
     Carga estado guardado: <input type="file" id="fileInputLoadState">
     </p>
     <p style="color:red; text-align: justify;" >
-            ⚠️ ADVERTENCIA: Esta herramienta genera scripts (particionador.sh y particionadorUUIDs_clone.sh) que <b>cuando <u>se ejecutan</u></b> modifican las particiones del disco. Ese proceso puede ocasionar pérdida de datos. Es necesario que se haya creado una copia de seguridad de los discos mediante una herramienta como clonezilla.<br> 
-            <span style="color:darkgreen"><b>Generar con esta herramienta los scripts</b>, que solo contienen texto con ordenes basch, <b>no tiene ningun peligro sobre los discos</b>.</span> Las precauciones se deben tomar al ejecutarlos.
+            <b>⚠️ ADVERTENCIA</b>: Esta herramienta genera scripts (particionador.sh y particionadorUUIDs_clone.sh) que <b>cuando <u>se ejecutan</u></b> modifican las particiones del disco. Ese proceso puede ocasionar pérdida de datos. Es necesario que <b>se haya creado una copia de seguridad de los discos</b> mediante una herramienta de clonado como clonezilla o similar.<br> 
+            <span style="color:darkgreen"><b>Generar con esta herramienta los scripts</b>, que solo contienen texto con ordenes basch, <b>no tiene ningun peligro sobre los discos</b>.</span> Las precauciones se deben tomar <b>al ejecutarlos</b>.<br>
+            <span style="color:darkgreen">Es muy recomendable, antes de proceder con los equipos reales, realizar la generación de los scripts y su ejecución en máquinas virtuales configuradas como los equipos reales. De esta manera nos familiarizaremos con en uso de la herramienta, los pasos a seguir y ver si los efectos sobre el sistema de archivios virtual es el esperado.</span>
     </p >
     <script>
         //para clonar
