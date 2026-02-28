@@ -50,86 +50,39 @@
             font-weight: bold;
             margin-left: 10px
         }
-
-        .command-box {
-            background: #111;
-            color: #0f0;
-            padding: 10px;
-            font-family: monospace;
-            cursor: pointer;
-            border-radius: 6px;
-            position: relative;
-        }
-
-        .command-box::after {
-            content: "Doble clic para copiar";
-            position: absolute;
-            right: 10px;
-            top: 5px;
-            font-size: 10px;
-            color: #aaa;
-        }
     </style>
 </head>
 
 <body>
 
     <h2 style="text-align: center;">Herramienta para particionar discos GPT.</h2>
-    <p style="color:rgb(5, 5, 67); text-align: center;">Útil para crear las particiones necesarias para instalar SRP en
-        varios equipos iguales creados con la mimsma maqueta.</p>
-    <p style="text-align: justify;">Abre una consola en el escritorio y ejecuta la orden:</p>
-    <div class="command-box" ondblclick="copyCommand(this)">
-        lsblk -J -b -O > bloques.json
-    </div>
-    <p style="text-align: justify;">el archivo bloques.json tiene la información de los discos y particiones del
-        sistema,
-        Cárgalo en esta herramienta para crear un script (<b>particionadorUUIDs_clone.sh</b>) que ejecutado en una terminal, genere
-        espacio libre
-        a partir de una partición grande presente en un disco, reduciéndola por su final y en el espacio liberado
-        se puede crear nuevas particiones que se precisen.(si el equipo tiene varios discos, se puede generar espacio a
-        partir de una particion por disco)<br>
+    <p style="color:rgb(5, 5, 67); text-align: center;">Útil para crear las particiones necesarias para instalar SRP en varios equipos iguales creados con la mimsma maqueta.</p>
+    <p style="text-align: justify;">Abre una consola en el escritorio y ejecuta la orden:<br>
+        <br><b>lsblk -J -b -o
+            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC >
+            bloques.json</b><br>
+        <br>el archivo bloques.json tiene la información de los discos y particiones del sistema,
+        Cárgalo en esta herramienta para crear un script (<b>particionador.sh</b>) que ejecutado en una terminal, genere espacio libre
+        a partir de una partición grande presente en un disco, reduciéndola por su final y en el espacio liberado 
+        se puede crear nuevas particiones que se precisen.(si el equipo tiene varios discos, se puede generar espacio a partir de una particion por disco)<br>
     </p>
-
     Boton de carga de bloques.json<input type="file" id="fileInput">
     <div id="disks"></div>
-    <button onclick="generateScript()">Generar el script particionadorUUIDs_clone.sh</button>
-    <!--<p style="color:darkblue; text-align: justify;">Tras ejecutar el script particionador.sh, habrá creado las
-        particiones configuradas, si deseamos que en los demás equipos se creen con las mismas UUIDs que en este,
-        deberemos obtener un nuevo <b>bloques.json</b>. Ejecutando de nuevo la orden lsblk ..., si cargamos el nuevo
-        archivo bloques.json obtenido con el botón siguiente en el <b>navegador ya configurado</b> obtendremos el
-        archivo <b>particionadorUUIDs_clone.sh</b>. Ejecutando ese script en equipos clon de este nos creara las mismas
-        nuevas particiones con los mismos UUIDs y PartUUIDs (a diferencia de particionador.sh en que los UUIDs y
-        PartUUIDs se asignanal azar).<br>
-        Botón para cargar el bloques.json nuevo y <button onclick="generateCloneScriptUNO()">Generar script
-            particionador con las UUIDs iguales del primer equipo</button>
-    </p>-->
-    <p style="color:rgb(79, 4, 4); text-align: justify;">
-        Al descargar <b>particionadorUUIDs_clone.sh</b> se descarga a la vez <b>Estado.json</b> un archivo con la
-        información de bloques.json y los datos que introdujimos para configurar particiones a redimensionar y nuevas a crear. Para
-        <u>generar un nuevo particionadorUUIDs_clone.sh</u> se precisa que el navegador esté configurado, si se carga
-        Estado.json  ya queda configurado con las opciones con que se generó y podríamos obtener un nuevo script, no obstante cuando
-        pulsemos el botón para generarlo las particiones obtendrán UUIDs y partUUIDs diferentes de los que se incluyeron en el script obtenido la vez anterior (<u>cada
-        vez que se pulsa se obtiene un nuevo conjunto de valores</u>)<br>
-        Normalmente para los equipos de una aula se debe usar el mismo particionadorUUIDs_clone.sh para todos, pues
-        normalmente se quiere que tengan las mismas UUIDs y partUUIDs en todos los equipos.<br>
-        Si se quieren distintos UUIDs o partUUIDs basta utilizar los scripts obtenidos pulsando dos o más veces el botón de generarlos (añadir al nombre una coletilla para distinguirlos al descargar ejemplo: particionadorUUIDs_clone<b>1</b>.sh,particionadorUUIDs_clone<b>2</b>.sh ... etc.).<br>
-        Carga estado guardado: <input type="file" id="fileInputLoadState">
+    <button onclick="generateScript()">Generar el script particionador.sh</button>
+    <p style="color:darkblue; text-align: justify;" >Tras ejecutar el script particionador.sh, habrá creado las particiones configuradas, si deseamos que en los demás equipos se creen con las mismas UUIDs que en este, deberemos obtener un nuevo <b>bloques.json</b>. Ejecutando de nuevo la orden lsblk ..., si cargamos el nuevo archivo bloques.json obtenido con el botón siguiente en el <b>navegador ya configurado</b> obtendremos el archivo <b>particionadorUUIDs_clone.sh</b>. Ejecutando ese script en equipos clon de este nos creara las mismas nuevas particiones con los mismos UUIDs y PartUUIDs (a diferencia de particionador.sh en que los UUIDs y PartUUIDs se asignanal azar).<br>
+    Botón para cargar el bloques.json nuevo y <button onclick="generateCloneScriptUNO()">Generar script particionador con las UUIDs iguales del primer equipo</button>
     </p>
-    <p style="color:red; text-align: justify;">
-        <b>⚠️ ADVERTENCIA</b>: Esta herramienta genera un script particionadorUUIDs_clone.sh que
-        <b>cuando <u>se ejecuta</u></b> modifica las particiones del disco. Ese proceso puede ocasionar pérdida de
-        datos. Es necesario que <b><u>con anterioridad</u> se haya creado una copia de seguridad de los discos</b> mediante una herramienta de
-        clonado como clonezilla o similar.<br>
-        <span style="color:darkgreen"><b>Generar con esta herramienta el script</b>, que solo contiene texto con
-            ordenes bash, <b>no tiene ningun peligro sobre los discos</b>.</span> Las precauciones se deben tomar <b>al
-            ejecutar particionadorUUIDs_clone.sh</b>.<br>
-        <span style="color:darkgreen">Es muy recomendable, antes de proceder con los equipos reales, realizar la
-            generación del script y su ejecución en máquinas virtuales configuradas como los equipos reales. De esta
-            manera nos familiarizaremos con en uso de la herramienta, los pasos a seguir y ver si los efectos sobre el
-            sistema de archivios virtual es el esperado.</span>
+    <p style="color:rgb(79, 4, 4); text-align: justify;" >
+        Al descargar <b>particionador.sh</b> se descarga a la vez <b>Estado.json</b> un archivo con la información de bloques.json y los datos que introdujimos para configurar particiones a redimensionar y nuevas a crear. Para <u>generar particionadorUUIDs_clone.sh se precisa que el navegador esté configurado</u> y si por error recargamos la página antes de leer el nuevo archivo bloques.json se perdería esa información. Para evitar que se tuviera que rehacer manualmente <b>se puede recuperar el navegador <u>completamente configurado</u> cargando <u>Estado.json</u></b> con el siguiente botón.<br>
+    Carga estado guardado: <input type="file" id="fileInputLoadState">
     </p>
-    <p><button
-            onclick="alert('vfat: '+ generarUUIDsegunFS('vfat')+'\nntfs: '+ generarUUIDsegunFS('ntfs')+'\next4: '+ generarUUIDsegunFS('ext4'))">pruebaUUID</button>
+    <p style="color:red; text-align: justify;" >
+            <b>⚠️ ADVERTENCIA</b>: Esta herramienta genera scripts (particionador.sh y particionadorUUIDs_clone.sh) que <b>cuando <u>se ejecutan</u></b> modifican las particiones del disco. Ese proceso puede ocasionar pérdida de datos. Es necesario que <b>se haya creado una copia de seguridad de los discos</b> mediante una herramienta de clonado como clonezilla o similar.<br> 
+            <span style="color:darkgreen"><b>Generar con esta herramienta los scripts</b>, que solo contienen texto con ordenes basch, <b>no tiene ningun peligro sobre los discos</b>.</span> Las precauciones se deben tomar <b>al ejecutarlos</b>.<br>
+            <span style="color:darkgreen">Es muy recomendable, antes de proceder con los equipos reales, realizar la generación de los scripts y su ejecución en máquinas virtuales configuradas como los equipos reales. De esta manera nos familiarizaremos con en uso de la herramienta, los pasos a seguir y ver si los efectos sobre el sistema de archivios virtual es el esperado.</span>
+    </p >
+    <p>
+        info:<a href="https://www.educa2.madrid.org/web/jgilpalacios/particionado-automatico-de-equipos-iguales-con-windows" target="_blank">https://www.educa2.madrid.org/web/jgilpalacios/particionado-automatico-de-equipos-iguales-con-windows</a>
     </p>
     <script>
         //para clonar
@@ -145,60 +98,6 @@
 
         // ---------------- UTILIDADES ----------------
         //todosSelected[disk.name] = { disk, part, input }
-        function copyCommand(el) {
-            navigator.clipboard.writeText(el.innerText)
-            el.style.background = "#003300"
-            setTimeout(() => el.style.background = "#111", 500)
-        }
-        ///UUIDs
-        ///PARA ext4 y swap y también partUUIDs
-        function uuidv4() {
-            return crypto.randomUUID()
-        }
-        //⚠️ FAT NO usa UUID estándar.Usa Volume ID de 8 caracteres hex (4 bytes).
-        function generarFATUUID() {
-            let aux = '' + Math.floor(Math.random() * 0xFFFFFFFF)
-                .toString(16)
-                .toUpperCase()
-                .padStart(8, '0')
-            return aux.substring(0, 4) + '-' + aux.substring(4);///+'\n'+aux;
-        }
-        ///🔹 ntfs NTFS usa un "serial number" de 8 bytes hex (16 caracteres).
-        function generarNTFSUUID() {
-            return crypto.getRandomValues(new Uint32Array(2))
-                .reduce((acc, val) => acc + val.toString(16).padStart(8, '0'), '')
-                .toUpperCase()
-        }
-        //para generar UUIDs segun file system
-        function generarUUIDsegunFS(fs) {
-            if (fs === "vfat") return generarFATUUID()
-            if (fs === "ntfs") return generarNTFSUUID()
-            return uuidv4() // ext4 y swap
-        }
-        //Comprobar que no existe en las particiones de los discos conectados
-        function uuidExiste(uuid, data, nuevas) {
-            //PRIMERO MIRAMOS QUE LAS NUEVAS NO SE REPITAN
-            let aux = false;
-            for (let disco in nuevas) {
-                //alert(JSON.stringify(nuevas[disco]))
-                if (nuevas[disco].length > 0) {
-                    let aux = nuevas[disco].some(p => {
-                        p.uuid === uuid || p.partuuid === uuid
-                    })
-                    if (aux) break;
-                }
-            }
-            if (aux) return aux;
-            //SI ES DIFERENTE MIRAMOS CON LAS DE LOS DISCOS EXITENTES
-            else return data.blockdevices.some(d =>
-                d.children?.some(p =>
-                    p.uuid === uuid || p.partuuid === uuid
-                )
-            )
-        }
-
-
-        /////
         const guardaConfiguracion = () => {
 
             localStorage.setItem("todosSelected", JSON.stringify(todosSelected))
@@ -273,8 +172,8 @@
         document.getElementById("fileInputLoadState").addEventListener("change", e => {
             const reader = new FileReader()
             reader.onload = evt => {
-                if (data) {
-                    if (!confirm("Cargar un estado guardado perderá los cambios no guardados actuales. ¿Desea continuar?")) {
+                if(data) {
+                    if(!confirm("Cargar un estado guardado perderá los cambios no guardados actuales. ¿Desea continuar?")) {
                         return
                     }
                 }
@@ -321,7 +220,7 @@
                     })
                 }
 
-
+               
             }
             reader.readAsText(e.target.files[0])
         })
@@ -339,9 +238,9 @@
                 radio.checked = false;
                 //radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
                 document.querySelectorAll(".partition-row span").forEach(s => {
-                    if (s.getAttribute("disco") === name)
-                        s.style.display = "none"
-                })
+                            if (s.getAttribute("disco") === name)
+                                s.style.display = "none"
+                        })
                 delete todosSelected[name];
                 if (newParts[name]) newParts[name].forEach(p => p.element.remove())
                 delete newParts[name];
@@ -396,23 +295,23 @@
                     radio.addEventListener("click", () => {
                         //localStorage.setItem("todosSelected", JSON.stringify(todosSelected))
                         //localStorage.setItem("newParts", JSON.stringify(newParts))
-                        if (todosSelected[disk.name] && todosSelected[disk.name] && todosSelected[disk.name].part.name !== part.name && newParts[disk.name] && newParts[disk.name].length > 0) {
-                            if (confirm("Cambiar de partición seleccionada perderá los cambios planificados en la partición actualmente seleccionada " + todosSelected[disk.name].part.name + ". ¿Desea continuar?")) {
+                        if(todosSelected[disk.name] && todosSelected[disk.name]&&todosSelected[disk.name].part.name !== part.name&&newParts[disk.name]&&newParts[disk.name].length>0) {
+                            if(confirm("Cambiar de partición seleccionada perderá los cambios planificados en la partición actualmente seleccionada " + todosSelected[disk.name].part.name + ". ¿Desea continuar?")) {
                                 //alert("Partición seleccionada: " + part.name)
                             } else {
                                 document.getElementById(`radio_${todosSelected[disk.name].part.name}`).checked = true;
-                                return;
+                                return;    
                             }
                         }
-                        //alert("Partición deseleccionada: " + part.name)
-                        //delete todosSelected[disk.name]
+                            //alert("Partición deseleccionada: " + part.name)
+                            //delete todosSelected[disk.name]
                         document.querySelectorAll(".partition-row span").forEach(s => {
                             if (s.getAttribute("disco") === disk.name)
                                 s.style.display = "none"
                         })
                         span.style.display = "inline"
                         selected = { disk, part, input }
-
+                        
                         if (todosSelected[disk.name]) {
                             if (todosSelected[disk.name].part.name !== part.name) {
                                 //alert("Partición seleccionada: " + part.name)
@@ -527,13 +426,13 @@
                     np.forEach((p, i) => {
                         num = base + i + 1;
                         let name = disk.name + sep + num;
-
+                        
                         let auxSize = document.getElementById(`size_${name}`).value.trim();
                         let size = parseInt(auxSize) || 0;
                         if (auxSize === "100%") {
                             size = bytesToMiB(part.size) - newSize - ocupado;
                         }
-
+                        
                         sizeCreadas += size;
                         if (!size) return
                         let percent = Math.floor(size / maxSize * Hasta100);
@@ -577,10 +476,10 @@
                     }
                 }
 
-
+               
             })
 
-
+            
         }
 
         // ---------------- AÑADIR NUEVA ----------------
@@ -649,9 +548,9 @@
 
             const removeBtn = div.querySelector("button")
             removeBtn.onclick = () => {
-
+                
                 const selectedPart = todosSelected[disk.name].part;
-
+                
 
                 if (!document.getElementById(`input_${selectedPart.name}`).value.trim()) {
                     alert("Indica el nuevo tamaño de la partición a redimensionar antes de añadir una nueva partición")
@@ -747,22 +646,6 @@ check_partition_NO_exists() {
     echo "ERROR: La partición $partition NO existe."
     exit 1
 }
-
-check_uuid_conflict() {
-  local uuid="$1"
-  if blkid -U "$uuid" &>/dev/null; then
-    echo "ERROR: Conflicto UUID $uuid"
-    exit 1
-  fi
-}
-
-check_partuuid_conflict() {
-  local partuuid="$1"
-  if blkid -t PARTUUID="$partuuid" &>/dev/null; then
-    echo "ERROR: Conflicto PARTUUID $partuuid"
-    exit 1
-  fi
-}
 `;
         let scriptConfirmar = {
             cabecera: `confirm_destruction() {
@@ -853,60 +736,32 @@ sleep 2
                     let sectorFin = sectorIni + (size * 1024 * 1024 / part['log-sec']) - 1;
                     newIni = newIni + (size * 1024 * 1024);
                     const fs = p.element.querySelector("select").value
-                    //Generar UUIDs y partUUIDs
-                    let nuevaUUID = generarUUIDsegunFS(fs);
-                    let nuevaPartUUID = generarUUIDsegunFS('ext4');
-                    while (uuidExiste(nuevaUUID, data, estadoValores)) {
-                        nuevaUUID = generarUUIDsegunFS(fs);
-                    }
-                    while (uuidExiste(nuevaPartUUID, data, estadoValores)) {
-                        nuevaPartUUID = generarUUIDsegunFS('ext4');
-                    }
-                    let partActual = { name: (disk.name + getSeparator(disk.name) + p.num), size: document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim(), label: label, fs: fs, uuid: nuevaUUID, partuuid: nuevaPartUUID }
-                    estadoValores[disk.name].nuevas.push(partActual);
-                    //alert(JSON.stringify(estadoValores));
+                    estadoValores[disk.name].nuevas.push({ name: (disk.name + getSeparator(disk.name) + p.num), size: document.getElementById(`size_${disk.name + getSeparator(disk.name) + p.num}`).value.trim(), label: label, fs: fs });
                     //alert(`Creando partición ${p.num} desde sector ${sectorIni} hasta sector ${sectorFin} con tamaño ${size} MiB y label "${label}" y fs ${fs}`)
                     let textoFs = '';
                     if (fs === 'ntfs' || fs === 'vfat') {
                         textoFs = `\nsgdisk -t ${p.num}:0700 "$DISK"`
                         if (label === 'EFI' && fs === 'vfat') textoFs = `\nsgdisk -t ${p.num}:EF00 "$DISK"`
                     }
-                    if (i > 0) script += `
-# Se chequea uuids frente a las que se van creando ----------                    
-if blkid | grep -q "${partActual.uuid}"; then
-  echo "ERROR: Conflicto con UUID ${partActual.uuid}"
-  exit 1
-fi
 
-#Se chequea partuuids frente a las que se van creando                    
-if blkid | grep -q "${partActual.partuuid}"; then
-  echo "ERROR: Conflicto con partUUID ${partActual.partuuid}"
-  exit 1
-fi
-#--------------------------------------------------------------
-`
                     if (i === toCreate.length - 1) {
                         sectorFin = (PartFin + 1) / part['log-sec'] - 1;
                         script += `\necho "Creando partición final"
 sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
-sgdisk -u ${p.num}:${partActual.partuuid} "$DISK"
 `
                     } else {
                         script += `\necho "Creando partición ${p.num}"
 sgdisk -n ${p.num}:${sectorIni}:${sectorFin} "$DISK"${textoFs}
-sgdisk -u ${p.num}:${partActual.partuuid} "$DISK"
 `
                     }
-                    ejecucionScript += `\ncheck_partition_exists  "${disk.path}${getSeparator(disk.name)}${p.num}"
-check_uuid_conflict "${partActual.uuid}"
-check_partuuid_conflict "${partActual.partuuid}"`
+                    ejecucionScript += `\ncheck_partition_exists  "${disk.path}${getSeparator(disk.name)}${p.num}"`
                     script += `
 partprobe "$DISK"
 sleep 1
 DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
 `                   ;
                     textoFs = '';
-                    /*if (label) {
+                    if (label) {
                         if (fs === 'vfat') textoFs = `-n ${label}`;
                         if (fs === 'ntfs') textoFs = `--label ${label}`;
                     }
@@ -921,51 +776,17 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
                         //if (fs === "ntfs") script += `ntfslabel "$DEV" "${label}"\n`
                         //if (fs === "vfat") script += `fatlabel "$DEV" "${label}"\n`
                         if (fs === "swap") script += `swaplabel -L "${label}" "$DEV"\n`
-                    }*/
-                    ////
-                    if (fs === "ext4")
-                        script += `mkfs.ext4 -U ${partActual.uuid} "$DEV"\n`
-                    //iba lo de ntfs antes de la etiqueta en el mkfs, pero al poner la etiqueta ahí no se aplicaba, así que se pone aparte y con --fast para que sea más rápido aunque no tan óptimo
-
-                    if (fs === "vfat") {
-                        let uuidSinGion = partActual.uuid.replace(/-/g, '');
-                        if (label) textoFs = `-n ${label}`;
-                        else textoFs = '';
-                        script += `mkfs.vfat -F32 ${textoFs} -i ${uuidSinGion} "$DEV"\n`
-
                     }
-                    if (fs === "swap") {
-                        if (label) {
-                            script += `mkswap -U ${partActual.uuid} "$DEV"\n`
-                            script += `swaplabel -L "${label}" -U ${partActual.uuid} "$DEV"\n`
-                        } else {
-                            script += `mkswap -U ${partActual.uuid} "$DEV"\n`
-                        }
-                    }
-                    if (label && fs !== "vfat") {
-                        if (fs === "ext4")
-                            script += `e2label "$DEV" "${label}"\n`
-                        /*if (fs === "ntfs")
-                            //script += `ntfslabel ${newDisk.path}${sep}${num} "${part.label}"\n`
-                            script += `mkfs.ntfs --fast --label "${label}" "$DEV"\n`*/
-                    }
-                    if (fs === "ntfs") {
-                        //script += `mkfs.ntfs -f -U ${part.uuid} ${newDisk.path}${sep}${num}\n`
-                        if (label) script += `mkfs.ntfs --fast --label "${label}" "$DEV"\n`
-                        else script += `mkfs.ntfs --fast "$DEV"\n`
-                        script += `ntfslabel --new-serial=${partActual.uuid} ${disk.path}${getSeparator(disk.name)}${p.num}\n`
-                    }
-                    ////
                 })
             }
             script += `\necho "FINALIZADO"\n`
             script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
-            download(script, /*"particionador.sh"*/particionadorUUIDs_clone.sh)
+            download(script, "particionador.sh")
             //guardar estado para clonar
             download(JSON.stringify({ newParts: newParts, data, estadoValores }), 'Estado.json')
             //para clonar
             originalState = JSON.parse(JSON.stringify(data))
-            //alert("Estado base guardado. Ahora puedes aplicar el script y cargar el nuevo JSON para modo CLON.")
+            alert("Estado base guardado. Ahora puedes aplicar el script y cargar el nuevo JSON para modo CLON.")
             //fin para clonar
         }
 
@@ -989,7 +810,7 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
             input.type = "file"
 
             input.onchange = e => {
-
+                
                 const reader = new FileReader()
                 reader.onload = evt => {
                     let cabeceraScript = `#!/bin/bash
@@ -1085,6 +906,7 @@ check_partuuid_conflict() {
 `}
                     //todosSelected[disk.name] = {disk, part, input}
                     let script = ``;
+                    let liberado={};
                     for (let key in todosSelected) {
                         //alert("Seleccionado en "+key+": "+JSON.stringify(todosSelected[key])) 
                         selected = todosSelected[key];
@@ -1096,7 +918,8 @@ check_partuuid_conflict() {
                         let PartFin = (part.start * part['log-sec']) + (+part.size - 1);
                         let newSize = parseInt(selected.input.value)
                         let originalMiB = bytesToMiB(part.size)
-                        let freed = originalMiB - newSize
+                        let freed = originalMiB - newSize;
+                        liberado[disk.name]=({name:part.name, freed: freed});
                         let numMatch = part.name.match(/(\d+)$/)
                         if (!numMatch) { alert("Error número partición"); return }
                         let partNumber = numMatch[1]
@@ -1133,10 +956,9 @@ sleep 2
 
                     //let script = `#!/bin/bash
                     //set -euo pipefail
-
-                    script += `#echo "Modo CLON OEM"
-`
-
+                    let chequeoConfiguradasConNuevoBloques=[];
+                    script += `#echo "Modo CLON OEM";
+`                   
                     originalState.blockdevices.forEach(origDisk => {
 
                         if (origDisk.type !== "disk") return
@@ -1146,6 +968,7 @@ sleep 2
 
                         const origParts = origDisk.children?.map(p => p.name) || []
                         const newParts = newDisk.children || []
+                        
 
                         newParts.forEach(part => {
 
@@ -1156,6 +979,26 @@ sleep 2
 
                                 const num = numMatch[1]
                                 const sep = getSeparator(newDisk.name)
+//nuevas comprobaciones
+let liberadoDisco=liberado[newDisk.name];
+let porAsignar=liberadoDisco.freed;                                
+if(document.getElementById(`size_${part.name}`)){
+    if(document.getElementById(`size_${part.name}`).value==='100%'){
+        if(+porAsignar!==+bytesToMiB(part.size))chequeoConfiguradasConNuevoBloques.push({part:part.name, error:'100% no es '+bytesToMiB(part.size)})
+    }else{
+        let aux=+document.getElementById(`size_${part.name}`).value;
+        if(aux !== +bytesToMiB(part.size))chequeoConfiguradasConNuevoBloques.push({part:part.name, error: aux+' no es '+bytesToMiB(part.size)});
+        porAsignar-=aux;
+    }
+    let auxFs=document.getElementById(`fs_${part.name}`).value
+    if(auxFs!==part.fstype)chequeoConfiguradasConNuevoBloques.push({part:part.name, error: auxFs+' no coincide con '+ part.fstype});
+    let auxLabel=part.label||'';
+    if(auxFs!=='swap'&&document.getElementById(`label_${part.name}`).value.trim() !== auxLabel)chequeoConfiguradasConNuevoBloques.push({part:part.name, error: document.getElementById(`label_${part.name}`).value+' no coincide con '+ auxLabel});
+    
+}
+    
+//liberado.push({name:part.name, freed: freed, disk:disk.name});
+//                       document.getElementById(`label_${nueva.name}`).value = nueva.label;
 
                                 script += `
 if blkid | grep -q "${part.uuid}"; then
@@ -1223,6 +1066,14 @@ sleep 1
 
                     script += `echo "CLON FINALIZADO"\n`
                     script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
+                    let error='';
+                    chequeoConfiguradasConNuevoBloques.forEach(err=>{
+                        error+=err.part+': '+err.error+'\n';
+                    })
+                    if(error!==''){
+                        alert('Se han producido los siguientes errores:\n'+error)
+                        return;
+                    }
                     download(script, "particionadorUUIDs_clone.sh")
                 }
 
@@ -1230,13 +1081,13 @@ sleep 1
             }
             //const input = document.createElement("input")
             //input.type = "file"
-            if (confirm("Selecciona el JSON obtenido con la información de los discos tras haber aplicado el script particionador.sh y de nuevo la orden lsblk -J ... para generar el script de clonación.")) {
+            if(confirm("Selecciona el JSON obtenido con la información de los discos tras haber aplicado el script particionador.sh y de nuevo la orden lsblk -J ... para generar el script de clonación.")){
                 input.click()
             }
         }
 
 
-
+        
 
 
     </script>

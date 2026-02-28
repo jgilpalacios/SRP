@@ -68,6 +68,25 @@
         .err {
             color: #b91c1c;
         }
+
+        .command-box {
+            background: #111;
+            color: #0f0;
+            padding: 10px;
+            font-family: monospace;
+            cursor: pointer;
+            border-radius: 6px;
+            position: relative;
+        }
+
+        .command-box::after {
+            content: "Doble clic para copiar";
+            position: absolute;
+            right: 10px;
+            top: 5px;
+            font-size: 10px;
+            color: #aaa;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
@@ -86,29 +105,30 @@
                 <option value="4" selected>4</option>
             </select></span>TRAS HABER CREADO Y CONFIGURADO LAS PARTICIONES NECESARIAS CON GPARTED<br />
         Abre una consola en el escritorio y ejecuta la orden:<br />
-        <b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;lsblk -J -b -o
-            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC > bloques.json</b><br />
-        y carga el archivo <u>bloques.json</u> con el siguiente botón <u>para identificar correctamente los discos y
-            particiones</u> en sistemas con NVMe, SATA.... <u>y cargarlos en el configurador</u><br />
-        <input type="file" id="fileInputDisco" accept=".json">
-        <hr>
+    <div class="command-box" ondblclick="copyCommand(this)">
+        lsblk -J -b -O > bloques.json
+    </div>
+    <br>y carga el archivo <u>bloques.json</u> con el siguiente botón <u>para identificar correctamente los discos y
+        particiones</u> en sistemas con NVMe, SATA.... <u>y cargarlos en el configurador</u><br />
+    <input type="file" id="fileInputDisco" accept=".json">
+    <hr>
 
 
-        <!-- Botón visible que abre el input oculto -->
-        Si ya configuraste un equipo y quieres repetir su configuración en otro:<button id="selectBtn">Cargar
-            configuración.txt</button>
+    <!-- Botón visible que abre el input oculto -->
+    Si ya configuraste un equipo y quieres repetir su configuración en otro:<button id="selectBtn">Cargar
+        configuración.txt</button>
 
-        <!-- input de archivo oculto (acepta .txt). No forzará nombre, por eso verificamos en JS -->
-        <input id="fileInput" type="file" accept=".txt,text/plain" style="display:none" />
+    <!-- input de archivo oculto (acepta .txt). No forzará nombre, por eso verificamos en JS -->
+    <input id="fileInput" type="file" accept=".txt,text/plain" style="display:none" />
 
-        <!-- Selecciona archivo particiones.txt -->
-        <label><input type="checkbox" id="chkUUID"
-                title="Si se selecciona se deben cargar las UUIDs de las particiones de cada equipo a instalar el SRP" />
-            Usar UUID</label>
-        <span id="uuidSection" style="display:none;">
-            Ejecuta en una terminal la orden: <b>blkid -s UUID>particiones.txt</b>
-            <button id="selectPartBtn">Buscar particiones.txt</button>
-            <input id="partFileInput" type="file" accept=".txt,text/plain" style="display:none" /></span>
+    <!-- Selecciona archivo particiones.txt -->
+    <label><input type="checkbox" id="chkUUID"
+            title="Si se selecciona se deben cargar las UUIDs de las particiones de cada equipo a instalar el SRP" />
+        Usar UUID</label>
+    <span id="uuidSection" style="display:none;">
+        Ejecuta en una terminal la orden: <b>blkid -s UUID>particiones.txt</b>
+        <button id="selectPartBtn">Buscar particiones.txt</button>
+        <input id="partFileInput" type="file" accept=".txt,text/plain" style="display:none" /></span>
     </p>
 
 
@@ -130,6 +150,13 @@
         <pre id="fileContent">—</pre>
     </span>
     <script>
+        ///command
+        function copyCommand(el) {
+            navigator.clipboard.writeText(el.innerText)
+            el.style.background = "#003300"
+            setTimeout(() => el.style.background = "#111", 500)
+        }
+        ///commmand
         let seHaCargadoUUIDsFile = false;
         let configuracion = {
             users: [{ nombre: 'madrid', pass: 'cmadrid', enc: false }, { nombre: 'consejeria', pass: 'cconsejeria', enc: true }],
@@ -210,7 +237,7 @@
                                 configuracion.particiones[2].particionRES2.UUID = p.uuid;
                             }
                             if (p.label) {
-                                if (p.label === 'EFI'&& !yaEstaEfiAsignada) {
+                                if (p.label === 'EFI' && !yaEstaEfiAsignada) {
                                     //si la partición se llama EFI, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
                                     configuracion.particiones[0].particionEFI.disco = disk.name;
                                     configuracion.particiones[0].particionEFI.particion = i + 1;
@@ -366,7 +393,7 @@
             }
             discosDesdeConfiguracion.sort();
             configuracion.nDiscos = discosDesdeConfiguracion.length;
-            namespaces=[];//limpiamos el array de namespaces para que luego al cargar los discos desde el archivo bloques.json sólo se muestren los discos que correspondan con los de la configuración cargada, aunque si no se ha cargado el archivo bloques.json se mostrarán todos los discos igual que antes.
+            namespaces = [];//limpiamos el array de namespaces para que luego al cargar los discos desde el archivo bloques.json sólo se muestren los discos que correspondan con los de la configuración cargada, aunque si no se ha cargado el archivo bloques.json se mostrarán todos los discos igual que antes.
             cargarTabs();
             console.log('Procesando configuración:', texto);
         }
