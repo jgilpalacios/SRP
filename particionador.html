@@ -128,9 +128,9 @@
             manera nos familiarizaremos con en uso de la herramienta, los pasos a seguir y ver si los efectos sobre el
             sistema de archivios virtual es el esperado.</span>
     </p>
-    <p><button
+    <!--<p><button
             onclick="alert('vfat: '+ generarUUIDsegunFS('vfat')+'\nntfs: '+ generarUUIDsegunFS('ntfs')+'\next4: '+ generarUUIDsegunFS('ext4'))">pruebaUUID</button>
-    </p>
+    </p>-->
     <script>
         //para clonar
         let originalState = null
@@ -960,7 +960,7 @@ DEV="${disk.path}${getSeparator(disk.name)}${p.num}"
             }
             script += `\necho "FINALIZADO"\n`
             script = cabeceraScript + "\n\n" + scriptFunciones + "\n\n" + scriptConfirmar.cabecera + scriptConfirmar.cuerpo + "\n" + scriptConfirmar.final + "\n\n" + ejecucionScript + "\n\n" + script;
-            download(script, /*"particionador.sh"*/particionadorUUIDs_clone.sh)
+            download(script, /*"particionador.sh"*/"particionadorUUIDs_clone.sh")
             //guardar estado para clonar
             download(JSON.stringify({ newParts: newParts, data, estadoValores }), 'Estado.json')
             //para clonar
