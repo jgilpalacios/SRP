@@ -1008,13 +1008,12 @@
                                 y habría que ser cuidadoso para que los redimensionados y tamaños de las particiones que
                                 se fueran creado fueran idénticos en todos los equipos, lo cual tiene su dificultad y
                                 sería propenso a errores. En este apartado se propone automatizar el proceso de creación
-                                del particionado mediante un script: <strong>particionador.sh</strong> (y si se quiere
-                                que las nuevas particiones creadas tengan los mismo UUIDs y partUUIDs que el primer
-                                equipo <strong>particionadorUUIDs_clone.sh</strong>), que junto con el
+                                del particionado mediante un script: <strong>particionadorUUIDs_clone.sh</strong> (que
+                                hace que
+                                las nuevas particiones creadas tengan los mismo UUIDs y partUUID en todos los
+                                equipoa), que junto con el
                                 srp.zip permitirá generar de forma automatizada las particiones y configurar el SRP de
-                                forma que queden idénticos todos los equipos (si bien, con particionador.sh, las UUID de
-                                las particiones equivalentes en los distintos equipos serán diferentes, con
-                                <strong>particionadorUUIDs_clone.sh sí serían las mismas</strong>), sin que se haya
+                                forma que queden idénticos todos los equipos , sin que se haya
                                 modificado el sistema windows de
                                 cada equipo, y por tanto sin que haya que revisar sus licencias.
                             </p>
@@ -1035,7 +1034,7 @@
                                         href="https://jgilpalacios.neocities.org/SRP/particionador" target="_blank"
                                         rel="noopener"><span
                                             style="font-size: 14pt;">https://jgilpalacios.neocities.org/SRP/particionador</span></a>,
-                                    obtendríamos<strong> particionador.sh</strong>, en la página <span
+                                    obtendríamos<strong> particionadorUUIDs_clone.sh</strong>, en la página <span
                                         style="font-size: 14pt;"><a href="https://jgilpalacios.neocities.org/SRP"
                                             target="_blank" rel="noopener">https://jgilpalacios.neocities.org/SRP/</a>
                                     </span>obtendríamos el <strong>srp.zip</strong>, apoyandonos con la simulación del
@@ -1046,16 +1045,15 @@
                                     automática posible, para lo que, como indica la nueva versión de la aplicación web,
                                     se debe ejecutar en una terminal el comando:
                                     <br>
-                                    <p style="text-align: left;"><strong>lsblk -J -b -o
-                                            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC
-                                            > bloques.json</strong></p><br>
+                                    <p style="text-align: left;"><strong>lsblk -J -b -O > bloques.json</strong></p><br>
                                     Que genera el archivo bloques.json conteniendo la información del particionado de
                                     los discos del equipo, pulsando el botón para la carga de bloques.json, se
                                     desplegará en la aplicación web de un gráfico (parecido al de gparted) y un listado
                                     de las particiones de las que podemos seleccionar (una por disco) para, reduciéndola
                                     por su final, obtener espacio y un botón para crear en ese espacio la nuevas
                                     particiones que precisemos. Una vez configurado se pulsa el botón para descargar
-                                    <b>particionador.sh</b>, en la nueva versión se descarga a la vez el archivo
+                                    <b>particionadorUUIDs_clone.sh</b>, en la nueva versión se descarga a la vez el
+                                    archivo
                                     <b>Estado.json</b> si lo cargamos con el botón para cargar el estado (al final) nos
                                     carga la información de los discos y nos configura el redimensionado y nuevas
                                     particiones en la aplicación web.
@@ -1066,35 +1064,27 @@
                                         frameborder="0" scrolling="no" allowfullscreen="allowfullscreen"></iframe>
                                     <br>En el siguiente video se puede ver <b>la <u>nueva versión</u> que se ha adaptado
                                         para funcionar tanto con discos <u>SATA como M2</u></b> y que es más ágil para
-                                    configurar y obtener los scripts.
+                                    configurar y obtener el script particionadorUUIDs_clone.sh.
                                     <br><iframe src="https://mediateca.educa.madrid.org/video/tspcbntnqwx2op6u/fs"
                                         width="420" height="315" frameborder="0" scrolling="no"
                                         style="border:0;overflow:hidden" allowfullscreen></iframe><br>
                                     En esté video que sigue, <b>se muestra como particionar e instalar el SRP en el
-                                        <u>resto de equipos del aula</u></b> a partir del los archivos de particionado y
+                                        <u>resto de equipos del aula</u></b> a partir del archivo
+                                    particionadorUUIDs_clone.sh de particionado y
                                     srp.zip que se obtuvieron, y ejecutaron en el primer equipo, se guardaron en un
                                     pendrive y que <b>se comprobó que funcionaban de forma correcta en el primer
-                                    equipo</b>.<br>
+                                        equipo</b>.<br>
                                     <iframe src="https://mediateca.educa.madrid.org/video/e8sdloep5tno8syi/fs"
                                         width="420" height="315" frameborder="0" scrolling="no"
                                         style="border:0;overflow:hidden" allowfullscreen></iframe><br>
                                 </li>
-                                <li style="text-align: justify;">Para obtener <b>particionadorUUIDs_clone.sh</b> se debe
-                                    ejecutar en una terminal particionador.sh, para que se cree el sistema de
-                                    particiones necesario con UUIDs y partUUIDs al azar, tras haber creado esas
-                                    particiones, se debe cargar la nueva información de los discos y particiones
-                                    volviendo a ejecutar el comando
-                                    <br>
-                                    <p style="text-align: left;"><b>lsblk -J -b -o
-                                            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START,LOG-SEC,PHY-SEC
-                                            > bloques.json</b></p><br>
-                                    y cargar la información de las nuevas particiones con el botón correspondiente de la
-                                    herramienta web ya configurada en el paso anterior que nos pedirá el nuevo
-                                    bloques.json y generará el archivo particionadorUUIDs_clone.sh. (si se hubiera
-                                    reiniciado el navegador se habría perdido la configuración, pero se puede volver a
-                                    reconfigurar usando el archivo Estado.json que se descarga a la vez que
-                                    particionador.sh en el paso anterior, Estado.json se puede cargar con el botón para
-                                    cargar el estado de la herramienta web)
+                                <li style="text-align: justify;">Este apartado en la versión actual ya no es necesario
+                                    ya que se simplificó la anterior para obtener directamente el script
+                                    particionadorUUIDs_clone.sh que ya asigna unos UUIDs y partUUIDs adecuados al
+                                    ejecutarse (en el paso 3). En la versión anterior era preciso obtenerlo en unos
+                                    pasos adicionales que se describián en este paso 4 (se pueden ver todavía en el
+                                    segundo video). Es decir que en la versión vigente ya se obtiene el archivo
+                                    particionadorUUIDs_clone.sh en el paso 3 y podemos ir directamente al paso 5
                                 </li>
                                 <li style="text-align: justify;">Una vez se han obtenido
                                     <strong>particionador.sh, particionadorUUIDs_clone.sh y srp.zip</strong>, lo ideal
