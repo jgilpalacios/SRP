@@ -612,9 +612,7 @@
                     comandos y en esa terminal ejecutar la orden que nos propone el propio Gestor de particiones:
                 </p>
                 <ul>
-                    <li><b>lsblk -J -o
-                            NAME,KNAME,PATH,TYPE,TRAN,SIZE,MODEL,SERIAL,FSTYPE,MOUNTPOINT,UUID,PARTUUID,LABEL,START
-                            > bloques.json</b></li>
+                    <li><b>lsblk -J -b -O > bloques.json</b></li>
                 </ul>
                 <p style="text-align: justify;">
                     Esta orden nos genera el archivo 'bloques.json' en la carpeta escritorio que tiene toda la
