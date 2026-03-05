@@ -263,7 +263,8 @@
                 newParts = {}
                 data = JSON.parse(evt.target.result);
                 data.blockdevices.forEach(d => {
-                    if (d.type === "disk" && d.children)
+                    //d.pttype debe ser gpt, no adaptado para dos
+                    if (d.type === "disk" && d.pttype === "gpt" && d.children)
                         d.children.sort((a, b) => a.start - b.start)
                 })
                 render()
@@ -294,7 +295,7 @@
                 data = savedState.data || data
                 originalState = JSON.parse(JSON.stringify(data))
                 data.blockdevices.forEach(d => {
-                    if (d.type === "disk" && d.children)
+                    if (d.type === "disk" && d.pttype === "gpt" && d.children)
                         d.children.sort((a, b) => a.start - b.start)
                 })
                 render();
@@ -358,12 +359,12 @@
             container.innerHTML = ""
 
             data.blockdevices.forEach(disk => {
-                if (disk.type !== "disk") return
+                if (disk.type !== "disk" || disk.pttype!=="gpt") return
 
                 const diskDiv = document.createElement("div")
                 diskDiv.className = "disk"
 
-                diskDiv.innerHTML = `<h3>${disk.path} (${bytesToMiB(disk.size)} MiB)</h3>`
+                diskDiv.innerHTML = `<h3>${disk.path} (${bytesToMiB(disk.size)} MiB) tipo: ${disk.tran}. ${disk.vendor?disk.vendor:'--'}//${disk.model?disk.model:'--'}//${disk.serial?disk.serial:'--'}</h3>`
 
                 const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg")
                 svg.setAttribute("data-disk", disk.name)
