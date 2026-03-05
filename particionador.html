@@ -710,6 +710,18 @@ check_disk() {
   [[ -b "$1" ]] || { echo "ERROR: Disco $1 no existe"; exit 1; }
 }
 
+check_disk_es_GPT() {
+    local disk="$1"
+
+    if parted -s "$disk" print 2>/dev/null | grep -q "Partition Table: gpt"; then
+        echo "El disco usa GPT"
+        return 0
+    else
+        echo "El disco $disk NO usa GPT"
+        exit 1
+    fi
+}
+
 check_partition_exists() {
     local partition="$1"
 
@@ -831,6 +843,7 @@ check_partuuid_conflict() {
                 let textoExt4 = part.fstype === 'ext4' ? `resize2fs ${part.path} ${newSizeMiB}M` : '';
                 scriptConfirmar.cuerpo += `\n  echo "   - ${disk.path}"`;
                 ejecucionScript += `\ncheck_disk "${disk.path}"
+check_disk_es_GPT "${disk.path}"               
 check_partition_NO_exists "${disk.path}${getSeparator(disk.name)}${partNumber}"
 unmount_if_mounted "${disk.path}${getSeparator(disk.name)}${partNumber}"
 `;
