@@ -639,7 +639,9 @@
                         let option = document.createElement("option");
                         option.value = disco;
                         option.innerText = /*"sd" +*/ disco;
-                        if (particion.nombre === "EFI" && disco !== discos[0]) return;
+                        //abrimos la posibilidad de elegir para efi cualquier disco, 
+                        // evita el problema de conflictos con pendrives de arranque.
+                        //if (particion.nombre === "EFI" && disco !== discos[0]) return;
                         if (particion[clave].disco === disco) option.selected = true;
                         discoSelect.appendChild(option);
                         if (namespaces.length > 0 && particion[clave].disco === disco) {
