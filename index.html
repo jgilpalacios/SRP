@@ -260,17 +260,17 @@
                                     configuracion.particiones[3].particionMAX.disco = disk.name;
                                     configuracion.particiones[3].particionMAX.particion = i + 1;
                                     configuracion.particiones[3].particionMAX.UUID = p.uuid;
-                                } else if (p.label.toLowerCase() === 'windows') {
+                                } else if (p.label.toLowerCase() === 'windows' || p.label.toLowerCase() === 'OS') {
                                     //si la partición se llama Windows, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
                                     configuracion.particiones[2].particionWIN.disco = disk.name;
                                     configuracion.particiones[2].particionWIN.particion = i + 1;
                                     configuracion.particiones[2].particionWIN.UUID = p.uuid;
-                                } else if (p.label === 'WINRE') {
-                                    //si la partición se llama WINRE, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
+                                } else if (p.label.toUpperCase() === 'WINRE' ||p.label.toLowerCase() === 'recuperacion' || p.label.toLowerCase() === 'recovery') {
+                                    //si la partición se llama WINRE, recuperacion o recovery, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
                                     configuracion.particiones[2].particionRES.disco = disk.name;
                                     configuracion.particiones[2].particionRES.particion = i + 1;
                                     configuracion.particiones[2].particionRES.UUID = p.uuid;
-                                } else if (p.label === 'reservado para el sistema') {
+                                } else if (p.label.toLowerCase() === 'reservado para el sistema') {
                                     //si la partición se llama reservado para el sistema, la asignamos automáticamente a la configuración para que se muestre seleccionada en el menú sin necesidad de cargar las UUIDs desde el archivo particiones.txt, aunque si se carga el archivo particiones.txt se actualizarán las UUIDs asignadas a cada partición
                                     configuracion.particiones[2].particionRES.disco = disk.name;
                                     configuracion.particiones[2].particionRES.particion = i + 1;
